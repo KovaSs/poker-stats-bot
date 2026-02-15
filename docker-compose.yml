@@ -5,6 +5,5 @@ services:
     restart: unless-stopped
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
-      - PORT=3000
     volumes:
-      - ./data:/app/data # сохраняем базу данных локально
+      - ./data:/app/data
