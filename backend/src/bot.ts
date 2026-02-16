@@ -1,4 +1,5 @@
 import { Telegraf } from "telegraf";
+
 import {
   createGame,
   addTransaction,
@@ -62,7 +63,7 @@ export function setupBot(token: string) {
     await deleteCommandMessage(ctx);
 
     try {
-      const stats = await getAllStats();
+      const stats = getAllStats();
       if (stats.length === 0) {
         await replyWithAutoDelete(ctx, "📊 Пока нет данных для отображения.");
         return;
@@ -95,7 +96,7 @@ export function setupBot(token: string) {
     await deleteCommandMessage(ctx);
 
     try {
-      const scores = await getAllScores();
+      const scores = getAllScores();
       if (scores.length === 0) {
         return replyWithAutoDelete(ctx, "Пока нет данных.");
       }
@@ -141,7 +142,7 @@ export function setupBot(token: string) {
       }
 
       console.log("[DEBUG] Вызов recalcStats...");
-      await recalcStats();
+      recalcStats(); // синхронно
       console.log("[DEBUG] recalcStats завершён");
 
       try {
@@ -163,34 +164,124 @@ export function setupBot(token: string) {
     await deleteCommandMessage(ctx);
 
     const helpMessage = `
-      📚 **Список доступных команд:**
+📚 **Список доступных команд:**
 
-      /stats — Показать детальную статистику всех участников (входы, выходы, разница)
-      /top — Топ-10 участников по разнице (выход минус вход)
-      /stats_update — Пересчитать агрегированную статистику на основе всех сохранённых транзакций
-      /new_game [ГГГГ-ММ-ДД] — Создать игру с указанием даты и списком участников (далее строки "Вход:" и "Выход:" с +сумма | ник)
-      /import — Импортировать игры из JSON-файла (прикрепите файл и в подписи напишите /import)
-      /help — Показать это сообщение
+/stats — Показать детальную статистику всех участников (входы, выходы, разница)
+/top — Топ-10 участников по разнице (выход минус вход)
+/stats_update — Пересчитать агрегированную статистику на основе всех сохранённых транзакций
+/new_game [ГГГГ-ММ-ДД] — Создать игру с указанием даты и списком участников (далее строки "Вход:" и "Выход:" с +сумма | ник)
+/import — Импортировать игры из JSON-файла (прикрепите файл и в подписи напишите /import)
+/help — Показать это сообщение
 
-      ℹ️ **Как добавлять данные:**
-      Сообщения должны содержать строки вида:
-      \`+<сумма> | <ник>\`
-      Секции помечаются как \`Вход:\` и \`Выход:\`
+ℹ️ **Как добавлять данные:**
+Сообщения должны содержать строки вида:
+\`+<сумма> | <ник>\`
+Секции помечаются как \`Вход:\` и \`Выход:\`
 
-      Пример:
-      \`\`\`
-      Вход:
-      +500 | Тема
-      +700 | @Rabotyaga3000
-      Выход:
-      +1840 | @EgorVaganov1111
-      \`\`\``;
+Пример:
+\`\`\`
+Вход:
++500 | Тема
++700 | @Rabotyaga3000
+Выход:
++1840 | @EgorVaganov1111
+\`\`\`
+    `;
 
     await replyWithAutoDelete(ctx, helpMessage, { parse_mode: "Markdown" });
   });
 
+  // Общая функция для обработки создания игры (используется командами /newgame и /new_game)
+  async function handleNewGame(ctx: any, commandText: string) {
+    console.log(`[HANDLER] ${commandText} вызван`);
+    await deleteCommandMessage(ctx);
+
+    const fullText = ctx.message.text;
+    const lines = fullText
+      .split("\n")
+      .map((line: string) => line.trim())
+      .filter((line: string) => line !== "");
+
+    const firstLine = lines[0];
+    const parts = firstLine.split(" ");
+    let gameDate: string | undefined;
+
+    if (parts.length >= 2 && /^\d{4}-\d{2}-\d{2}$/.test(parts[1])) {
+      gameDate = parts[1];
+    } else {
+      gameDate = new Date().toISOString().slice(0, 10);
+    }
+
+    let gameId: number;
+    try {
+      gameId = createGame(ctx.chat.id, ctx.message.message_id, gameDate);
+    } catch (err) {
+      console.error(`[${commandText}] Ошибка создания игры:`, err);
+      await replyWithAutoDelete(ctx, "❌ Не удалось создать игру.");
+      return;
+    }
+
+    const dataLines = lines.slice(1);
+    let currentType: "in" | "out" | null = null;
+    let savedCount = 0;
+
+    for (const line of dataLines) {
+      if (line.toLowerCase() === "вход:") {
+        currentType = "in";
+        console.log(`[${commandText} PARSE] Установлен тип: вход`);
+        continue;
+      } else if (line.toLowerCase() === "выход:") {
+        currentType = "out";
+        console.log(`[${commandText} PARSE] Установлен тип: выход`);
+        continue;
+      }
+
+      if (!currentType) continue;
+
+      const match = line.match(/^\+(\d+)\s*\|\s*([^\/\n]+)/);
+      if (match) {
+        const points = parseInt(match[1], 10);
+        let username = match[2].trim();
+        const commentIndex = username.indexOf("//");
+        if (commentIndex !== -1)
+          username = username.substring(0, commentIndex).trim();
+
+        if (username) {
+          try {
+            addTransaction(gameId, username, points, currentType);
+            savedCount++;
+            console.log(
+              `[${commandText} DB] Сохранено: ${username} +${points} (${currentType})`,
+            );
+          } catch (err) {
+            console.error(
+              `[${commandText} ERROR] Не удалось сохранить ${username}:`,
+              err,
+            );
+          }
+        }
+      }
+    }
+
+    if (savedCount === 0) {
+      await replyWithAutoDelete(
+        ctx,
+        "⚠️ Не найдено ни одной корректной записи. Игра создана без транзакций.",
+      );
+    } else {
+      await replyWithAutoDelete(
+        ctx,
+        `✅ Игра от ${gameDate} успешно создана. Добавлено записей: ${savedCount}`,
+      );
+    }
+  }
+
+  // Команда /new_game (с подчёркиванием)
+  bot.command("new_game", (ctx) => handleNewGame(ctx, "/new_game"));
+  // Команда /newgame (без подчёркивания) для совместимости
+  bot.command("newgame", (ctx) => handleNewGame(ctx, "/newgame"));
+
   // --- ИМПОРТ ИЗ JSON ---
-  // Функция обработки файла
   async function handleImportFile(ctx: any, document: any) {
     console.log("[IMPORT] Начинаем обработку файла:", document.file_name);
 
@@ -248,7 +339,7 @@ export function setupBot(token: string) {
 
       let gameId: number;
       try {
-        gameId = await createGame(ctx.chat.id, null, item.date);
+        gameId = createGame(ctx.chat.id, null, item.date);
       } catch (err) {
         console.error("[IMPORT] Ошибка создания игры:", err);
         errors.push(`Не удалось создать игру для даты ${item.date}`);
@@ -284,7 +375,7 @@ export function setupBot(token: string) {
 
           if (username) {
             try {
-              await addTransaction(gameId, username, points, currentType);
+              addTransaction(gameId, username, points, currentType);
               savedCount++;
             } catch (err) {
               console.error(
@@ -351,15 +442,13 @@ export function setupBot(token: string) {
       return;
     }
 
-    console.log("[TEXT] обработка сообщения:", JSON.stringify(ctx));
-
     console.log("[TEXT] обработка сообщения:", ctx.message.text);
     const text = ctx.message.text;
     const lines = text.split("\n");
 
     let gameId: number;
     try {
-      gameId = await createGame(ctx.chat.id, ctx.message.message_id);
+      gameId = createGame(ctx.chat.id, ctx.message.message_id);
     } catch (err) {
       console.error("[GAME] Ошибка создания игры:", err);
       return;
@@ -390,7 +479,7 @@ export function setupBot(token: string) {
 
         if (username) {
           try {
-            await addTransaction(gameId, username, points, currentType);
+            addTransaction(gameId, username, points, currentType);
             savedCount++;
           } catch (err) {
             console.error(`[DB ERROR] Не удалось сохранить ${username}:`, err);
