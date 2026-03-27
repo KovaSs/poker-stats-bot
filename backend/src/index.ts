@@ -5,11 +5,12 @@ dotenv.config();
 import { setupBot } from "./bot";
 import { initDB } from "./db";
 
+const TELEGRAM_API_URL = process.env.TELEGRAM_API_URL!;
 const BOT_TOKEN = process.env.BOT_TOKEN!;
 
 async function main() {
   await initDB();
-  const bot = setupBot(BOT_TOKEN);
+  const bot = setupBot(BOT_TOKEN, TELEGRAM_API_URL);
   bot.launch();
   console.log("Bot started");
 

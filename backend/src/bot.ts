@@ -12,8 +12,14 @@ import {
   createGame,
 } from "./db";
 
-export function setupBot(token: string) {
-  const bot = new Telegraf(token);
+export function setupBot(token: string, apiRoot?: string) {
+  const options: any = {};
+
+  if (apiRoot) {
+    options.telegram = options.telegram || {};
+    options.telegram.apiRoot = apiRoot;
+  }
+  const bot = new Telegraf(token, options);
 
   // Логирование всех сообщений (отладка)
   bot.use((ctx, next) => {
