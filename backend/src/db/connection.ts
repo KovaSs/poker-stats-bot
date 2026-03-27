@@ -1,12 +1,14 @@
 import Database from "better-sqlite3";
 import path from "path";
 
+import { logger } from "../config/logger";
+
 let db: Database.Database;
 
 export function initDB(): Database.Database {
   const dbPath = path.join(__dirname, "../../../data/stats.db");
   db = new Database(dbPath);
-  console.log("[DB] База данных инициализирована");
+  logger.info("[DB] База данных инициализирована");
 
   // Таблица games
   db.exec(`
@@ -51,7 +53,7 @@ export function initDB(): Database.Database {
     )
     .get();
   if (tableExists) {
-    console.log(
+    logger.info(
       "[DB] Обнаружена старая таблица user_stats, выполняем миграцию...",
     );
     db.exec(`
@@ -59,7 +61,7 @@ export function initDB(): Database.Database {
       SELECT username, total_in, total_out FROM user_stats
     `);
     db.exec(`DROP TABLE user_stats`);
-    console.log("[DB] Миграция завершена");
+    logger.info("[DB] Миграция завершена");
   }
 
   return db;

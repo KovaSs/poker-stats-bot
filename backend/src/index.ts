@@ -1,13 +1,15 @@
-import { initDB } from "./db/connection";
-import { setupBot } from "./telegram/bot";
-import { startApiServer } from "./api/server";
 import { BOT_TOKEN, TELEGRAM_API_URL } from "./config/env";
+import { setupBot } from "./telegram/bot";
+import { initDB } from "./db/connection";
+import { logger } from "./config/logger";
+
+// import { startApiServer } from './api/server';
 
 async function main() {
   initDB();
   const bot = setupBot(BOT_TOKEN, TELEGRAM_API_URL);
   bot.launch();
-  console.log("Bot started");
+  logger.info("Bot started");
 
   // startApiServer();
 
@@ -15,4 +17,7 @@ async function main() {
   process.once("SIGTERM", () => bot.stop("SIGTERM"));
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  logger.error({ error: err }, "Fatal error");
+  process.exit(1);
+});

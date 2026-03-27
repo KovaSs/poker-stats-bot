@@ -1,4 +1,5 @@
 import { getDB } from "../connection";
+import { logger } from "../../config/logger";
 
 export interface GameRow {
   id: number;
@@ -14,7 +15,7 @@ export const GameRepository = {
       `INSERT INTO games (chat_id, message_id, game_date) VALUES (?, ?, ?)`,
     );
     const info = stmt.run(chatId, messageId, gameDate || null);
-    console.log(
+    logger.info(
       `[DB] createGame успешно, lastID: ${info.lastInsertRowid}, дата: ${gameDate || "не указана"}`,
     );
     return Number(info.lastInsertRowid);
@@ -24,29 +25,30 @@ export const GameRepository = {
     const stmt = getDB().prepare(
       `SELECT * FROM games WHERE chat_id = ? AND message_id = ?`,
     );
-    const row = stmt.get(chatId, messageId) as GameRow | null;
+    const row = stmt.get(chatId, messageId) as GameRow | undefined;
     if (row) {
-      console.log(
+      logger.info(
         `[DB] Найдена игра ID ${row.id} для чата ${chatId}, сообщения ${messageId}`,
       );
+      return row;
     } else {
-      console.log(
+      logger.info(
         `[DB] Игра для чата ${chatId}, сообщения ${messageId} не найдена`,
       );
     }
-    return row;
+    return null;
   },
 
   updateDate(id: number, gameDate: string): void {
     const stmt = getDB().prepare(`UPDATE games SET game_date = ? WHERE id = ?`);
     stmt.run(gameDate, id);
-    console.log(`[DB] Дата игры ${id} обновлена на ${gameDate}`);
+    logger.info(`[DB] Дата игры ${id} обновлена на ${gameDate}`);
   },
 
   delete(id: number): void {
     const stmt = getDB().prepare(`DELETE FROM games WHERE id = ?`);
     const info = stmt.run(id);
-    console.log(`[DB] Удалена игра ID ${id}, изменено строк: ${info.changes}`);
+    logger.info(`[DB] Удалена игра ID ${id}, изменено строк: ${info.changes}`);
   },
 
   deleteByChatAndMessage(chatId: number, messageId: number): boolean {

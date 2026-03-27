@@ -5,12 +5,14 @@ import { GameRepository } from "../db/repositories";
 
 import { deleteCommandMessage, replyWithAutoDelete } from "./middlewares";
 
-export const statsHandler = async (ctx: Context) => {
+import type { CommandContext } from "../types/telegram";
+
+export const statsHandler = async (ctx: CommandContext) => {
   console.log(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
   await deleteCommandMessage(ctx);
 
   try {
-    const args = (ctx.message as any)?.text.split(" ").slice(1) || [];
+    const args = ctx.message.text.split(" ").slice(1);
     let filter: string | undefined = undefined;
     if (args.length > 0) {
       const arg = args[0].toLowerCase();
@@ -57,12 +59,12 @@ export const statsHandler = async (ctx: Context) => {
   }
 };
 
-export const topHandler = async (ctx: Context) => {
+export const topHandler = async (ctx: CommandContext) => {
   console.log(`[HANDLER] /top вызван пользователем ${ctx.from?.id}`);
   await deleteCommandMessage(ctx);
 
   try {
-    const args = (ctx.message as any)?.text.split(" ").slice(1) || [];
+    const args = ctx.message.text.split(" ").slice(1);
     let filter: string | undefined = undefined;
     if (args.length > 0) {
       const arg = args[0].toLowerCase();
@@ -104,7 +106,7 @@ export const topHandler = async (ctx: Context) => {
   }
 };
 
-export const statsUpdateHandler = async (ctx: Context) => {
+export const statsUpdateHandler = async (ctx: CommandContext) => {
   console.log("[HANDLER] /stats_update вызван");
   await deleteCommandMessage(ctx);
 
@@ -130,7 +132,7 @@ export const statsUpdateHandler = async (ctx: Context) => {
   }
 };
 
-export const helpHandler = async (ctx: Context) => {
+export const helpHandler = async (ctx: CommandContext) => {
   console.log("[HANDLER] /help вызван");
   await deleteCommandMessage(ctx);
 
@@ -155,6 +157,7 @@ export const helpHandler = async (ctx: Context) => {
   await replyWithAutoDelete(ctx, helpMessage, { parse_mode: "Markdown" });
 };
 
+// Текстовые сообщения – используем Context (проверяем наличие полей внутри)
 export const textHandler = async (ctx: Context) => {
   const msg = ctx.message as any;
   const text = msg.text || msg.caption;
@@ -229,6 +232,7 @@ export const textHandler = async (ctx: Context) => {
   }
 };
 
+// Фото – используем Context
 export const photoHandler = async (ctx: Context) => {
   const caption = (ctx.message as any)?.caption;
   if (!caption) return;
@@ -282,6 +286,7 @@ export const photoHandler = async (ctx: Context) => {
   );
 };
 
+// Редактирование – используем Context
 export const editedMessageHandler = async (ctx: Context) => {
   const editedMessage = ctx.editedMessage as any;
   if (!editedMessage) return;

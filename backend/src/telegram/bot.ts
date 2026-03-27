@@ -1,4 +1,8 @@
 import { Telegraf } from "telegraf";
+
+import { logger } from "../config/logger";
+
+import { errorHandler } from "./middlewares";
 import * as handlers from "./handlers";
 
 export function setupBot(token: string, apiRoot?: string) {
@@ -11,10 +15,13 @@ export function setupBot(token: string, apiRoot?: string) {
   // Middleware для логирования всех сообщений
   bot.use((ctx, next) => {
     if (ctx.message && "text" in ctx.message) {
-      console.log(`[RAW] ${ctx.message.text}`);
+      logger.info(`[RAW] ${ctx.message.text}`);
     }
     return next();
   });
+
+  // Глобальный обработчик ошибок
+  bot.catch(errorHandler);
 
   // Регистрируем обработчики команд
   bot.command("stats", handlers.statsHandler);

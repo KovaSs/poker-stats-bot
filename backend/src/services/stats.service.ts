@@ -1,4 +1,5 @@
 import { TransactionRepository, UserRepository } from "../db/repositories";
+import { logger } from "../config/logger";
 
 export type Filter = { year?: string; all?: boolean; sinceDate?: string };
 
@@ -40,7 +41,7 @@ export const StatsService = {
   },
 
   recalcStats(): void {
-    console.log("[StatsService] Пересчёт статистики...");
+    logger.info("[StatsService] Пересчёт статистики...");
     // Очищаем таблицу users
     UserRepository.clear();
 
@@ -74,7 +75,7 @@ export const StatsService = {
     );
 
     UserRepository.insertMany(usersToInsert);
-    console.log(
+    logger.info(
       `[StatsService] Пересчёт завершён, обработано пользователей: ${usersToInsert.length}`,
     );
   },

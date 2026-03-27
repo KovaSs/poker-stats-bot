@@ -1,3 +1,4 @@
+import { logger } from "../../config/logger";
 import { getDB } from "../connection";
 
 export interface UserRow {
@@ -12,12 +13,14 @@ export interface UserRow {
 export const UserRepository = {
   findByUsername(username: string): UserRow | null {
     const stmt = getDB().prepare(`SELECT * FROM users WHERE username = ?`);
-    return stmt.get(username) as UserRow | null;
+    const row = stmt.get(username) as UserRow | undefined;
+    return row || null;
   },
 
   findByTelegramId(telegramId: number): UserRow | null {
     const stmt = getDB().prepare(`SELECT * FROM users WHERE telegram_id = ?`);
-    return stmt.get(telegramId) as UserRow | null;
+    const row = stmt.get(telegramId) as UserRow | undefined;
+    return row || null;
   },
 
   upsert(user: Partial<UserRow> & { username: string }): void {
@@ -47,7 +50,7 @@ export const UserRepository = {
       user.games_count || 0,
       newGameIds,
     );
-    console.log(`[DB] Upsert пользователя ${user.username}`);
+    logger.info(`[DB] Upsert пользователя ${user.username}`);
   },
 
   clear(): void {
@@ -79,6 +82,6 @@ export const UserRepository = {
       }
     });
     insert(users);
-    console.log(`[DB] Вставлено ${users.length} пользователей`);
+    logger.info(`[DB] Вставлено ${users.length} пользователей`);
   },
 };

@@ -1,12 +1,13 @@
+import { logger } from "../../config/logger";
 import { getDB } from "../connection";
 
 export interface TransactionRow {
-  id: number;
-  game_id: number;
-  username: string;
-  amount: number;
   type: "in" | "out";
   created_at: string;
+  username: string;
+  game_id: number;
+  amount: number;
+  id: number;
 }
 
 export const TransactionRepository = {
@@ -20,7 +21,7 @@ export const TransactionRepository = {
       `INSERT INTO transactions (game_id, username, amount, type) VALUES (?, ?, ?, ?)`,
     );
     const info = stmt.run(gameId, username, amount, type);
-    console.log(
+    logger.info(
       `[DB] addTransaction: ${username} +${amount} (${type}), lastID: ${info.lastInsertRowid}`,
     );
     return Number(info.lastInsertRowid);
@@ -29,7 +30,7 @@ export const TransactionRepository = {
   deleteByGameId(gameId: number): number {
     const stmt = getDB().prepare(`DELETE FROM transactions WHERE game_id = ?`);
     const info = stmt.run(gameId);
-    console.log(`[DB] Удалено транзакций для игры ${gameId}: ${info.changes}`);
+    logger.info(`[DB] Удалено транзакций для игры ${gameId}: ${info.changes}`);
     return info.changes;
   },
 
@@ -78,7 +79,7 @@ export const TransactionRepository = {
 
     const stmt = getDB().prepare(sql);
     const rows = stmt.all(...params) as any[];
-    console.log(`[DB] getFilteredStats: получено ${rows.length} записей`);
+    logger.info(`[DB] getFilteredStats: получено ${rows.length} записей`);
     return rows;
   },
 
@@ -108,7 +109,7 @@ export const TransactionRepository = {
 
     const stmt = getDB().prepare(sql);
     const rows = stmt.all(...params) as any[];
-    console.log(`[DB] getFilteredScores: получено ${rows.length} записей`);
+    logger.info(`[DB] getFilteredScores: получено ${rows.length} записей`);
     return rows;
   },
 };
