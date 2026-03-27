@@ -1,0 +1,81 @@
+import { TransactionRepository, UserRepository } from "../db/repositories";
+
+export type Filter = { year?: string; all?: boolean; sinceDate?: string };
+
+function buildFilter(filter?: string | "all"): Filter {
+  if (filter === "all") {
+    return { all: true };
+  }
+  if (filter && /^\d{4}$/.test(filter)) {
+    return { year: filter };
+  }
+  // по умолчанию последний год
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const sinceDate = oneYearAgo.toISOString().slice(0, 10);
+  return { sinceDate };
+}
+
+export const StatsService = {
+  getFilteredStats(filter?: string | "all") {
+    const f = buildFilter(filter);
+    if (f.all) {
+      return TransactionRepository.getFilteredStats();
+    }
+    if (f.year) {
+      return TransactionRepository.getFilteredStats({ year: f.year });
+    }
+    return TransactionRepository.getFilteredStats({ sinceDate: f.sinceDate });
+  },
+
+  getFilteredScores(filter?: string | "all") {
+    const f = buildFilter(filter);
+    if (f.all) {
+      return TransactionRepository.getFilteredScores();
+    }
+    if (f.year) {
+      return TransactionRepository.getFilteredScores({ year: f.year });
+    }
+    return TransactionRepository.getFilteredScores({ sinceDate: f.sinceDate });
+  },
+
+  recalcStats(): void {
+    console.log("[StatsService] Пересчёт статистики...");
+    // Очищаем таблицу users
+    UserRepository.clear();
+
+    // Получаем агрегированные данные по пользователям и играм
+    const rows = TransactionRepository.getGroupedByUsernameAndGame();
+
+    const userMap = new Map<
+      string,
+      { total_in: number; total_out: number; games: Set<number> }
+    >();
+    for (const row of rows) {
+      const key = row.username;
+      if (!userMap.has(key)) {
+        userMap.set(key, { total_in: 0, total_out: 0, games: new Set() });
+      }
+      const user = userMap.get(key)!;
+      user.total_in += row.total_in;
+      user.total_out += row.total_out;
+      user.games.add(row.game_id);
+    }
+
+    // Подготовка данных для вставки
+    const usersToInsert = Array.from(userMap.entries()).map(
+      ([username, data]) => ({
+        username,
+        total_in: data.total_in,
+        total_out: data.total_out,
+        games_count: data.games.size,
+        game_ids: JSON.stringify(Array.from(data.games)),
+      }),
+    );
+
+    UserRepository.insertMany(usersToInsert);
+    console.log(
+      `[StatsService] Пересчёт завершён, обработано пользователей: ${usersToInsert.length}`,
+    );
+  },
+};
