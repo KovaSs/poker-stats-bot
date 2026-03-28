@@ -1,8 +1,8 @@
 # Анализ структуры проекта
 
-**Дата генерации:** 3/28/2026, 2:26:17 PM
-**Обработано файлов:** 53
-**Всего элементов (с учётом папок):** 73
+**Дата генерации:** 3/28/2026, 4:38:09 PM
+**Обработано файлов:** 55
+**Всего элементов (с учётом папок):** 76
 
 ## Структура проекта
 
@@ -34,6 +34,10 @@
 │   │   │   │   └── index.ts
 │   │   │   └── connection.ts
 │   │   ├── services/
+│   │   │   ├── game.service/
+│   │   │   │   ├── game.service.test.ts
+│   │   │   │   ├── game.service.ts
+│   │   │   │   └── index.ts
 │   │   │   ├── parser.service/
 │   │   │   │   ├── index.ts
 │   │   │   │   ├── parser.service.test.ts
@@ -42,7 +46,6 @@
 │   │   │   │   ├── index.ts
 │   │   │   │   ├── stats.service.test.ts
 │   │   │   │   └── stats.service.ts
-│   │   │   ├── game.service.ts
 │   │   │   └── index.ts
 │   │   ├── telegram/
 │   │   │   ├── bot.ts
@@ -102,7 +105,9 @@
 - [backend/src/db/repositories/user.repository/user.repository.test.ts](#backend-src-db-repositories-user_repository-user_repository_test_ts)
 - [backend/src/db/repositories/user.repository/user.repository.ts](#backend-src-db-repositories-user_repository-user_repository_ts)
 - [backend/src/index.ts](#backend-src-index_ts)
-- [backend/src/services/game.service.ts](#backend-src-services-game_service_ts)
+- [backend/src/services/game.service/game.service.test.ts](#backend-src-services-game_service-game_service_test_ts)
+- [backend/src/services/game.service/game.service.ts](#backend-src-services-game_service-game_service_ts)
+- [backend/src/services/game.service/index.ts](#backend-src-services-game_service-index_ts)
 - [backend/src/services/index.ts](#backend-src-services-index_ts)
 - [backend/src/services/parser.service/index.ts](#backend-src-services-parser_service-index_ts)
 - [backend/src/services/parser.service/parser.service.test.ts](#backend-src-services-parser_service-parser_service_test_ts)
@@ -183,11 +188,13 @@
 // backend/src/api/routes/stats.test.ts
 
 ```typescript
+import { vi, describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
+
+import { StatsService } from "@/services";
+
 import statsRouter from "./stats";
-import { StatsService } from "../../services";
-import { vi, describe, it, expect, beforeEach } from "vitest";
 
 vi.mock("../../services", () => ({
   StatsService: {
@@ -209,22 +216,22 @@ describe("GET /stats", () => {
     ];
     (StatsService.getFilteredStats as any).mockReturnValue(mockStats);
 
-    const res = await request(app).get("/stats");
+    const res = await request(app).get("/stats?chatId=123");
     expect(res.status).toBe(200);
     expect(res.body).toEqual(mockStats);
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(undefined);
+    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(123, undefined);
   });
 
   it("передаёт параметр filter", async () => {
-    await request(app).get("/stats?filter=2024");
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith("2024");
+    await request(app).get("/stats?chatId=123&filter=2024");
+    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(123, "2024");
   });
 
   it("обрабатывает ошибки сервиса", async () => {
     (StatsService.getFilteredStats as any).mockImplementation(() => {
       throw new Error("DB error");
     });
-    const res = await request(app).get("/stats");
+    const res = await request(app).get("/stats?chatId=123");
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: "Internal server error" });
   });
@@ -237,14 +244,24 @@ describe("GET /stats", () => {
 ```typescript
 import { Router } from "express";
 
-import { StatsService } from "../../services";
+import { StatsService } from "@/services";
 
 const router = Router();
 
 router.get("/", (req, res) => {
   try {
     const filter = req.query.filter as string | undefined;
-    const stats = StatsService.getFilteredStats(filter);
+    const chatIdParam = req.query.chatId as string | undefined;
+
+    if (!chatIdParam) {
+      return res.status(400).json({ error: "chatId is required" });
+    }
+    const chatId = parseInt(chatIdParam, 10);
+    if (isNaN(chatId)) {
+      return res.status(400).json({ error: "Invalid chatId" });
+    }
+
+    const stats = StatsService.getFilteredStats(chatId, filter);
     res.json(stats);
   } catch (error) {
     console.error("[API] /stats error:", error);
@@ -261,8 +278,8 @@ export default router;
 ```typescript
 import express from "express";
 
-import { logger } from "../config/logger";
-import { API_PORT } from "../config/env";
+import { logger } from "@/config/logger";
+import { API_PORT } from "@/config/env";
 
 import statsRouter from "./routes/stats";
 
@@ -301,6 +318,8 @@ export function startApiServer() {
 import dotenv from "dotenv";
 import path from "path";
 
+import { logger } from "@/config/logger";
+
 const envPath = path.resolve(process.cwd(), "../.env");
 dotenv.config({ path: envPath });
 
@@ -309,7 +328,7 @@ export const TELEGRAM_API_URL = process.env.TELEGRAM_API_URL!;
 export const API_PORT = parseInt(process.env.API_PORT || "3000", 10);
 
 if (!BOT_TOKEN) {
-  console.error(
+  logger.error(
     "❌ BOT_TOKEN не задан. Создайте файл .env в корне проекта и добавьте BOT_TOKEN=ваш_токен",
   );
   process.exit(1);
@@ -341,7 +360,7 @@ export const logger = pino({
 import Database from "better-sqlite3";
 import path from "path";
 
-import { logger } from "../config/logger";
+import { logger } from "@/config/logger";
 
 let db: Database.Database;
 
@@ -386,6 +405,12 @@ export function initDB(): Database.Database {
     )
   `);
 
+  // Создание индексов для ускорения запросов
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_transactions_game_id ON transactions(game_id);
+    CREATE INDEX IF NOT EXISTS idx_games_game_date ON games(game_date);
+  `);
+
   // Миграция старой таблицы user_stats (если есть)
   const tableExists = db
     .prepare(
@@ -420,11 +445,11 @@ export function getDB(): Database.Database {
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Database from "better-sqlite3";
 
-import { getDB } from "../../connection";
+import { getDB } from "@/db/connection";
 
 import { GameRepository } from "./game.repository";
 
-vi.mock("../../connection", () => ({
+vi.mock("@/db/connection", () => ({
   getDB: vi.fn(),
 }));
 
@@ -482,7 +507,7 @@ describe("GameRepository", () => {
 ```typescript
 import { logger } from "@/config/logger";
 
-import { getDB } from "../../connection";
+import { getDB } from "@/db/connection";
 
 export interface GameRow {
   id: number;
@@ -573,11 +598,11 @@ export * from "./transaction.repository";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Database from "better-sqlite3";
 
-import { getDB } from "../../connection";
+import { getDB } from "@/db/connection";
 
 import { TransactionRepository } from "./transaction.repository";
 
-vi.mock("../../connection", () => ({
+vi.mock("@/db/connection", () => ({
   getDB: vi.fn(),
 }));
 
@@ -715,7 +740,7 @@ describe("TransactionRepository", () => {
     });
 
     it("возвращает статистику без фильтрации", () => {
-      const stats = TransactionRepository.getFilteredStats();
+      const stats = TransactionRepository.getFilteredStats(123);
       expect(stats).toHaveLength(2);
       // Проверяем порядок по разнице (out - in) DESC
       // user1: total_in=120, total_out=50 -> разница -70 (убыток)
@@ -732,7 +757,7 @@ describe("TransactionRepository", () => {
     });
 
     it("фильтрует по году", () => {
-      const stats2024 = TransactionRepository.getFilteredStats({
+      const stats2024 = TransactionRepository.getFilteredStats(123, {
         year: "2024",
       });
       expect(stats2024).toHaveLength(2);
@@ -749,7 +774,7 @@ describe("TransactionRepository", () => {
       expect(stats2024[1].total_out).toBe(50);
       expect(stats2024[1].games_count).toBe(1);
 
-      const stats2025 = TransactionRepository.getFilteredStats({
+      const stats2025 = TransactionRepository.getFilteredStats(123, {
         year: "2025",
       });
       expect(stats2025).toHaveLength(2);
@@ -769,7 +794,7 @@ describe("TransactionRepository", () => {
 
     it('фильтрует по дате "с"', () => {
       const sinceDate = "2025-01-01";
-      const stats = TransactionRepository.getFilteredStats({ sinceDate });
+      const stats = TransactionRepository.getFilteredStats(123, { sinceDate });
       expect(stats).toHaveLength(2);
       // должны попасть только игры с game_date >= sinceDate (только игра2, 2025-06-20)
       // user2: in=0, out=10 → diff = +10
@@ -805,7 +830,7 @@ describe("TransactionRepository", () => {
     });
 
     it("возвращает топ по разнице (score = total_out - total_in)", () => {
-      const scores = TransactionRepository.getFilteredScores();
+      const scores = TransactionRepository.getFilteredScores(123);
       // user1: (50+0) - (100+20) = -70
       // user2: (0+10) - (30+0) = -20
       expect(scores).toEqual([
@@ -815,7 +840,7 @@ describe("TransactionRepository", () => {
     });
 
     it("фильтрует по году", () => {
-      const scores2024 = TransactionRepository.getFilteredScores({
+      const scores2024 = TransactionRepository.getFilteredScores(123, {
         year: "2024",
       });
       expect(scores2024).toEqual([
@@ -823,7 +848,7 @@ describe("TransactionRepository", () => {
         { username: "user1", score: -50 }, // in=100 out=50 => -50
       ]);
 
-      const scores2025 = TransactionRepository.getFilteredScores({
+      const scores2025 = TransactionRepository.getFilteredScores(123, {
         year: "2025",
       });
       expect(scores2025).toEqual([
@@ -834,7 +859,9 @@ describe("TransactionRepository", () => {
 
     it('фильтрует по дате "с"', () => {
       const sinceDate = "2025-01-01";
-      const scores = TransactionRepository.getFilteredScores({ sinceDate });
+      const scores = TransactionRepository.getFilteredScores(123, {
+        sinceDate,
+      });
       expect(scores).toEqual([
         { username: "user2", score: 10 },
         { username: "user1", score: -20 },
@@ -849,8 +876,7 @@ describe("TransactionRepository", () => {
 
 ```typescript
 import { logger } from "@/config/logger";
-
-import { getDB } from "../../connection";
+import { getDB } from "@/db/connection";
 
 export interface TransactionRow {
   type: "in" | "out";
@@ -901,7 +927,10 @@ export const TransactionRepository = {
     return stmt.all() as any[];
   },
 
-  getFilteredStats(filter?: { year?: string; sinceDate?: string }): {
+  getFilteredStats(
+    chatId: number,
+    filter?: { year?: string; sinceDate?: string },
+  ): {
     username: string;
     total_in: number;
     total_out: number;
@@ -915,14 +944,15 @@ export const TransactionRepository = {
         COUNT(DISTINCT t.game_id) as games_count
       FROM transactions t
       JOIN games g ON t.game_id = g.id
+      WHERE g.chat_id = ?
     `;
-    const params: any[] = [];
+    const params: any[] = [chatId];
 
     if (filter?.year) {
-      sql += ` WHERE g.game_date LIKE ?`;
+      sql += ` AND g.game_date LIKE ?`;
       params.push(`${filter.year}%`);
     } else if (filter?.sinceDate) {
-      sql += ` WHERE g.game_date >= ?`;
+      sql += ` AND g.game_date >= ?`;
       params.push(filter.sinceDate);
     }
 
@@ -934,25 +964,26 @@ export const TransactionRepository = {
     return rows;
   },
 
-  getFilteredScores(filter?: {
-    year?: string;
-    sinceDate?: string;
-  }): { username: string; score: number }[] {
+  getFilteredScores(
+    chatId: number,
+    filter?: { year?: string; sinceDate?: string },
+  ): { username: string; score: number }[] {
     let sql = `
       SELECT
         t.username,
         (COALESCE(SUM(CASE WHEN t.type = 'out' THEN t.amount ELSE 0 END), 0) -
-         COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0)) as score
+          COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0)) as score
       FROM transactions t
       JOIN games g ON t.game_id = g.id
+      WHERE g.chat_id = ?
     `;
-    const params: any[] = [];
+    const params: any[] = [chatId];
 
     if (filter?.year) {
-      sql += ` WHERE g.game_date LIKE ?`;
+      sql += ` AND g.game_date LIKE ?`;
       params.push(`${filter.year}%`);
     } else if (filter?.sinceDate) {
-      sql += ` WHERE g.game_date >= ?`;
+      sql += ` AND g.game_date >= ?`;
       params.push(filter.sinceDate);
     }
 
@@ -980,10 +1011,11 @@ export * from "./user.repository";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Database from "better-sqlite3";
 
-import { UserRepository } from "./user.repository";
-import { getDB } from "../../connection";
+import { getDB } from "@/db/connection";
 
-vi.mock("../../connection", () => ({
+import { UserRepository } from "./user.repository";
+
+vi.mock("@/db/connection", () => ({
   getDB: vi.fn(),
 }));
 
@@ -1209,8 +1241,7 @@ describe("UserRepository", () => {
 
 ```typescript
 import { logger } from "@/config/logger";
-
-import { getDB } from "../../connection";
+import { getDB } from "@/db/connection";
 
 export interface UserRow {
   telegram_id: number | null;
@@ -1302,12 +1333,12 @@ export const UserRepository = {
 // backend/src/index.ts
 
 ```typescript
-import { BOT_TOKEN, TELEGRAM_API_URL } from "./config/env";
-import { setupBot } from "./telegram/bot";
-import { initDB } from "./db/connection";
-import { logger } from "./config/logger";
+import { BOT_TOKEN, TELEGRAM_API_URL } from "@/config/env";
+import { setupBot } from "@/telegram/bot";
+import { initDB } from "@/db/connection";
+import { logger } from "@/config/logger";
 
-// import { startApiServer } from './api/server';
+// import { startApiServer } from "./api/server";
 
 async function main() {
   initDB();
@@ -1328,12 +1359,178 @@ main().catch((err) => {
 
 ```
 
-// backend/src/services/game.service.ts
+// backend/src/services/game.service/game.service.test.ts
+
+```typescript
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+import { TransactionRepository } from "@/db/repositories/transaction.repository";
+import { GameRepository } from "@/db/repositories/game.repository";
+
+import { ParsedTransaction } from "../parser.service";
+import { StatsService } from "../stats.service";
+
+import { GameService } from "./game.service";
+
+vi.mock("@/db/repositories/game.repository", () => ({
+  GameRepository: {
+    create: vi.fn(),
+    findByChatAndMessage: vi.fn(),
+    updateDate: vi.fn(),
+    delete: vi.fn(),
+    deleteByChatAndMessage: vi.fn(),
+  },
+}));
+
+vi.mock("@/db/repositories/transaction.repository", () => ({
+  TransactionRepository: {
+    add: vi.fn(),
+    deleteByGameId: vi.fn(),
+  },
+}));
+
+vi.mock("../stats.service", () => ({
+  StatsService: {
+    recalcStats: vi.fn(),
+  },
+}));
+
+describe("GameService", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("createGame", () => {
+    it("создаёт игру и возвращает gameId", () => {
+      const mockGameId = 42;
+      (GameRepository.create as any).mockReturnValue(mockGameId);
+
+      const result = GameService.createGame(123, 456, "2026-03-28");
+
+      expect(GameRepository.create).toHaveBeenCalledWith(
+        123,
+        456,
+        "2026-03-28",
+      );
+      expect(result).toBe(mockGameId);
+      // recalcStats не должен вызываться при создании
+      expect(StatsService.recalcStats).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("addTransactions", () => {
+    it("добавляет транзакции и пересчитывает статистику", () => {
+      const gameId = 1;
+      const transactions: ParsedTransaction[] = [
+        { username: "user1", amount: 100, type: "in" },
+        { username: "user2", amount: 200, type: "out" },
+      ];
+
+      const savedCount = GameService.addTransactions(gameId, transactions);
+
+      expect(TransactionRepository.add).toHaveBeenCalledTimes(2);
+      expect(TransactionRepository.add).toHaveBeenNthCalledWith(
+        1,
+        gameId,
+        "user1",
+        100,
+        "in",
+      );
+      expect(TransactionRepository.add).toHaveBeenNthCalledWith(
+        2,
+        gameId,
+        "user2",
+        200,
+        "out",
+      );
+      expect(savedCount).toBe(2);
+      expect(StatsService.recalcStats).toHaveBeenCalledTimes(1);
+    });
+
+    it("корректно обрабатывает пустой массив транзакций", () => {
+      const gameId = 1;
+      const savedCount = GameService.addTransactions(gameId, []);
+
+      expect(TransactionRepository.add).not.toHaveBeenCalled();
+      expect(savedCount).toBe(0);
+      expect(StatsService.recalcStats).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("updateGame", () => {
+    it("обновляет дату, удаляет старые транзакции, добавляет новые и пересчитывает статистику", () => {
+      const gameId = 1;
+      const newDate = "2026-03-29";
+      const newTransactions: ParsedTransaction[] = [
+        { username: "user1", amount: 50, type: "in" },
+      ];
+
+      // Шпионим за addTransactions, чтобы проверить его вызов
+      const addSpy = vi.spyOn(GameService, "addTransactions");
+
+      const result = GameService.updateGame(gameId, newDate, newTransactions);
+
+      expect(GameRepository.updateDate).toHaveBeenCalledWith(gameId, newDate);
+      expect(TransactionRepository.deleteByGameId).toHaveBeenCalledWith(gameId);
+      expect(addSpy).toHaveBeenCalledWith(gameId, newTransactions);
+      expect(result).toBe(1); // addTransactions вернёт 1
+
+      addSpy.mockRestore();
+    });
+  });
+
+  describe("deleteGame", () => {
+    it("удаляет игру и связанные транзакции, пересчитывает статистику, возвращает true", () => {
+      const chatId = 123;
+      const messageId = 456;
+      const mockGame = {
+        id: 5,
+        chat_id: chatId,
+        message_id: messageId,
+        game_date: null,
+        created_at: "",
+      };
+      (GameRepository.findByChatAndMessage as any).mockReturnValue(mockGame);
+      (TransactionRepository.deleteByGameId as any).mockReturnValue(3); // количество удалённых транзакций
+
+      const result = GameService.deleteGame(chatId, messageId);
+
+      expect(GameRepository.findByChatAndMessage).toHaveBeenCalledWith(
+        chatId,
+        messageId,
+      );
+      expect(TransactionRepository.deleteByGameId).toHaveBeenCalledWith(5);
+      expect(GameRepository.delete).toHaveBeenCalledWith(5);
+      expect(StatsService.recalcStats).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
+    });
+
+    it("возвращает false, если игра не найдена", () => {
+      (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
+
+      const result = GameService.deleteGame(123, 456);
+
+      expect(GameRepository.findByChatAndMessage).toHaveBeenCalledWith(
+        123,
+        456,
+      );
+      expect(TransactionRepository.deleteByGameId).not.toHaveBeenCalled();
+      expect(GameRepository.delete).not.toHaveBeenCalled();
+      expect(StatsService.recalcStats).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+  });
+});
+
+```
+
+// backend/src/services/game.service/game.service.ts
 
 ```typescript
 import { GameRepository, TransactionRepository } from "@/db/repositories";
 
-import { ParsedTransaction } from "./parser.service";
+import { ParsedTransaction } from "../parser.service";
+import { StatsService } from "../stats.service";
 
 export const GameService = {
   createGame(
@@ -1341,7 +1538,9 @@ export const GameService = {
     messageId: number | null,
     gameDate?: string,
   ): number {
-    return GameRepository.create(chatId, messageId, gameDate);
+    const gameId = GameRepository.create(chatId, messageId, gameDate);
+    // Статистика будет пересчитана после добавления транзакций
+    return gameId;
   },
 
   addTransactions(gameId: number, transactions: ParsedTransaction[]): number {
@@ -1350,6 +1549,8 @@ export const GameService = {
       TransactionRepository.add(gameId, tx.username, tx.amount, tx.type);
       savedCount++;
     }
+    // Пересчитываем агрегированную статистику после добавления транзакций
+    StatsService.recalcStats();
     return savedCount;
   },
 
@@ -1359,14 +1560,33 @@ export const GameService = {
     newTransactions: ParsedTransaction[],
   ): number {
     GameRepository.updateDate(gameId, newDate);
+    // Удаляем старые транзакции
     TransactionRepository.deleteByGameId(gameId);
-    return this.addTransactions(gameId, newTransactions);
+    // Добавляем новые (внутри вызывается recalcStats)
+    const savedCount = this.addTransactions(gameId, newTransactions);
+    return savedCount;
   },
 
   deleteGame(chatId: number, messageId: number): boolean {
-    return GameRepository.deleteByChatAndMessage(chatId, messageId);
+    const game = GameRepository.findByChatAndMessage(chatId, messageId);
+    if (!game) return false;
+
+    // Удаляем транзакции игры
+    TransactionRepository.deleteByGameId(game.id);
+    // Удаляем саму игру
+    GameRepository.delete(game.id);
+    // Пересчитываем статистику
+    StatsService.recalcStats();
+    return true;
   },
 };
+
+```
+
+// backend/src/services/game.service/index.ts
+
+```typescript
+export { GameService } from "./game.service";
 
 ```
 
@@ -1382,7 +1602,7 @@ export { GameService } from "./game.service";
 // backend/src/services/parser.service/index.ts
 
 ```typescript
-export * as ParserService from "./parser.service";
+export { ParserService, type ParsedTransaction } from "./parser.service";
 
 ```
 
@@ -1391,7 +1611,7 @@ export * as ParserService from "./parser.service";
 ```typescript
 import { describe, it, expect } from "vitest";
 
-import { parseTransactions, extractGameDateFromText } from "./parser.service";
+import { ParserService } from "./parser.service";
 
 describe("parser.service", () => {
   describe("parseTransactions", () => {
@@ -1404,7 +1624,7 @@ describe("parser.service", () => {
         "+1840 | @EgorVaganov1111",
         "+290 | kovass",
       ];
-      const result = parseTransactions(lines);
+      const result = ParserService.parseTransactions(lines);
       expect(result).toHaveLength(4);
       expect(result[0]).toEqual({ username: "Тема", amount: 500, type: "in" });
       expect(result[1]).toEqual({
@@ -1426,20 +1646,20 @@ describe("parser.service", () => {
 
     it("игнорирует строки без типа", () => {
       const lines = ["+500 | User", "Вход:", "+300 | User2"];
-      const result = parseTransactions(lines);
+      const result = ParserService.parseTransactions(lines);
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({ username: "User2", amount: 300, type: "in" });
     });
 
     it("игнорирует пустые строки и лишние пробелы", () => {
       const lines = ["Вход:", "  +500 | User  ", "", "  +200 | User2"];
-      const result = parseTransactions(lines);
+      const result = ParserService.parseTransactions(lines);
       expect(result).toHaveLength(2);
     });
 
     it("корректно обрезает комментарии", () => {
       const lines = ["Вход:", "+500 | User // comment"];
-      const result = parseTransactions(lines);
+      const result = ParserService.parseTransactions(lines);
       expect(result[0].username).toBe("User");
     });
   });
@@ -1447,13 +1667,13 @@ describe("parser.service", () => {
   describe("extractGameDateFromText", () => {
     it("извлекает дату из команды game", () => {
       const text = "game 27.03.2026 some text";
-      const date = extractGameDateFromText(text);
+      const date = ParserService.extractGameDateFromText(text);
       expect(date).toBe("2026-03-27");
     });
 
     it("возвращает null, если дата отсутствует", () => {
       const text = "game no date";
-      const date = extractGameDateFromText(text);
+      const date = ParserService.extractGameDateFromText(text);
       expect(date).toBeNull();
     });
   });
@@ -1470,51 +1690,53 @@ export interface ParsedTransaction {
   type: "in" | "out";
 }
 
-export function parseTransactions(lines: string[]): ParsedTransaction[] {
-  let currentType: "in" | "out" | null = null;
-  const transactions: ParsedTransaction[] = [];
+export const ParserService = {
+  parseTransactions(lines: string[]): ParsedTransaction[] {
+    let currentType: "in" | "out" | null = null;
+    const transactions: ParsedTransaction[] = [];
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.toLowerCase() === "вход:") {
-      currentType = "in";
-      continue;
-    } else if (trimmed.toLowerCase() === "выход:") {
-      currentType = "out";
-      continue;
-    }
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.toLowerCase() === "вход:") {
+        currentType = "in";
+        continue;
+      } else if (trimmed.toLowerCase() === "выход:") {
+        currentType = "out";
+        continue;
+      }
 
-    if (!currentType) continue;
+      if (!currentType) continue;
 
-    const match = trimmed.match(/^\+(\d+)\s*\|\s*([^\/\n]+)/);
-    if (match) {
-      const points = parseInt(match[1], 10);
-      let username = match[2].trim();
-      const commentIndex = username.indexOf("//");
-      if (commentIndex !== -1)
-        username = username.substring(0, commentIndex).trim();
+      const match = trimmed.match(/^\+(\d+)\s*\|\s*([^\/\n]+)/);
+      if (match) {
+        const points = parseInt(match[1], 10);
+        let username = match[2].trim();
+        const commentIndex = username.indexOf("//");
+        if (commentIndex !== -1)
+          username = username.substring(0, commentIndex).trim();
 
-      if (username) {
-        transactions.push({
-          username,
-          amount: points,
-          type: currentType,
-        });
+        if (username) {
+          transactions.push({
+            username,
+            amount: points,
+            type: currentType,
+          });
+        }
       }
     }
-  }
 
-  return transactions;
-}
+    return transactions;
+  },
 
-export function extractGameDateFromText(text: string): string | null {
-  const dateMatch = text.match(/game\s+(\d{2})\.(\d{2})\.(\d{4})/);
-  if (dateMatch) {
-    const [, day, month, year] = dateMatch;
-    return `${year}-${month}-${day}`;
-  }
-  return null;
-}
+  extractGameDateFromText(text: string): string | null {
+    const dateMatch = text.match(/game\s+(\d{2})\.(\d{2})\.(\d{4})/);
+    if (dateMatch) {
+      const [, day, month, year] = dateMatch;
+      return `${year}-${month}-${day}`;
+    }
+    return null;
+  },
+};
 
 ```
 
@@ -1576,7 +1798,7 @@ describe("StatsService", () => {
     TransactionRepository.add(gameId, "user1", 100, "in");
     TransactionRepository.add(gameId, "user1", 200, "out");
 
-    const stats = StatsService.getFilteredStats("2024");
+    const stats = StatsService.getFilteredStats(1, "2024");
     expect(stats).toHaveLength(1);
     expect(stats[0].username).toBe("user1");
     expect(stats[0].total_in).toBe(100);
@@ -1588,7 +1810,7 @@ describe("StatsService", () => {
     const gameId = GameRepository.create(1, 1, "2024-01-01");
     TransactionRepository.add(gameId, "user1", 100, "in");
 
-    const stats = StatsService.getFilteredStats(); // последний год (текущий 2026)
+    const stats = StatsService.getFilteredStats(1); // последний год (текущий 2026)
     expect(stats).toHaveLength(0);
   });
 
@@ -1601,7 +1823,7 @@ describe("StatsService", () => {
     TransactionRepository.add(gameId2, "user2", 50, "in");
     TransactionRepository.add(gameId2, "user2", 100, "out"); // diff +50
 
-    const scores = StatsService.getFilteredScores("2024");
+    const scores = StatsService.getFilteredScores(1, "2024");
     expect(scores).toEqual([
       { username: "user1", score: 200 },
       { username: "user2", score: 50 },
@@ -1620,15 +1842,15 @@ describe("StatsService", () => {
     expect(users).toHaveLength(2);
     expect(users[0]).toMatchObject({
       username: "user1",
-      total_in: 100,
-      total_out: 200,
       games_count: 1,
+      total_out: 200,
+      total_in: 100,
     });
     expect(users[1]).toMatchObject({
       username: "user2",
+      games_count: 1,
       total_in: 50,
       total_out: 0,
-      games_count: 1,
     });
   });
 });
@@ -1658,26 +1880,30 @@ function buildFilter(filter?: string | "all"): Filter {
 }
 
 export const StatsService = {
-  getFilteredStats(filter?: string | "all") {
+  getFilteredStats(chatId: number, filter?: string | "all") {
     const f = buildFilter(filter);
     if (f.all) {
-      return TransactionRepository.getFilteredStats();
+      return TransactionRepository.getFilteredStats(chatId);
     }
     if (f.year) {
-      return TransactionRepository.getFilteredStats({ year: f.year });
+      return TransactionRepository.getFilteredStats(chatId, { year: f.year });
     }
-    return TransactionRepository.getFilteredStats({ sinceDate: f.sinceDate });
+    return TransactionRepository.getFilteredStats(chatId, {
+      sinceDate: f.sinceDate,
+    });
   },
 
-  getFilteredScores(filter?: string | "all") {
+  getFilteredScores(chatId: number, filter?: string | "all") {
     const f = buildFilter(filter);
     if (f.all) {
-      return TransactionRepository.getFilteredScores();
+      return TransactionRepository.getFilteredScores(chatId);
     }
     if (f.year) {
-      return TransactionRepository.getFilteredScores({ year: f.year });
+      return TransactionRepository.getFilteredScores(chatId, { year: f.year });
     }
-    return TransactionRepository.getFilteredScores({ sinceDate: f.sinceDate });
+    return TransactionRepository.getFilteredScores(chatId, {
+      sinceDate: f.sinceDate,
+    });
   },
 
   recalcStats(): void {
@@ -1728,7 +1954,7 @@ export const StatsService = {
 ```typescript
 import { Telegraf } from "telegraf";
 
-import { logger } from "../config/logger";
+import { logger } from "@/config/logger";
 
 import { errorHandler } from "./middlewares";
 import * as handlers from "./handlers";
@@ -1772,15 +1998,16 @@ export function setupBot(token: string, apiRoot?: string) {
 ```typescript
 import { Context } from "telegraf";
 
-import { StatsService, GameService, ParserService } from "../services";
-import { GameRepository } from "../db/repositories";
+import { StatsService, GameService, ParserService } from "@/services";
+import { GameRepository } from "@/db/repositories";
+import { logger } from "@/config/logger";
 
 import { deleteCommandMessage, replyWithAutoDelete } from "./middlewares";
 
-import type { CommandContext } from "../types/telegram";
+import type { CommandContext } from "@/types/telegram";
 
 export const statsHandler = async (ctx: CommandContext) => {
-  console.log(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
+  logger.info(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
   await deleteCommandMessage(ctx);
 
   try {
@@ -1799,7 +2026,8 @@ export const statsHandler = async (ctx: CommandContext) => {
       }
     }
 
-    const stats = StatsService.getFilteredStats(filter);
+    const chatId = ctx.chat!.id;
+    const stats = StatsService.getFilteredStats(chatId, filter);
     if (stats.length === 0) {
       await replyWithAutoDelete(ctx, "📊 Пока нет данных за указанный период.");
       return;
@@ -1826,13 +2054,13 @@ export const statsHandler = async (ctx: CommandContext) => {
     message += "```";
     await replyWithAutoDelete(ctx, message, { parse_mode: "Markdown" });
   } catch (error) {
-    console.error("[ERROR] /stats:", error);
+    logger.error(`[ERROR] /stats: ${JSON.stringify(error, null, 2)}`);
     await replyWithAutoDelete(ctx, "❌ Ошибка при загрузке статистики.");
   }
 };
 
 export const topHandler = async (ctx: CommandContext) => {
-  console.log(`[HANDLER] /top вызван пользователем ${ctx.from?.id}`);
+  logger.info(`[HANDLER] /top вызван пользователем ${ctx.from?.id}`);
   await deleteCommandMessage(ctx);
 
   try {
@@ -1851,7 +2079,8 @@ export const topHandler = async (ctx: CommandContext) => {
       }
     }
 
-    const scores = StatsService.getFilteredScores(filter);
+    const chatId = ctx.chat!.id;
+    const scores = StatsService.getFilteredScores(chatId, filter);
     if (scores.length === 0) {
       await replyWithAutoDelete(ctx, "📊 Пока нет данных за указанный период.");
       return;
@@ -1873,13 +2102,13 @@ export const topHandler = async (ctx: CommandContext) => {
 
     await replyWithAutoDelete(ctx, title + top);
   } catch (error) {
-    console.error("[ERROR] /top:", error);
+    logger.error(`[ERROR] /top: ${JSON.stringify(error, null, 2)}`);
     await replyWithAutoDelete(ctx, "❌ Ошибка при загрузке топа.");
   }
 };
 
 export const statsUpdateHandler = async (ctx: CommandContext) => {
-  console.log("[HANDLER] /stats_update вызван");
+  logger.info("[HANDLER] /stats_update вызван");
   await deleteCommandMessage(ctx);
 
   try {
@@ -1899,13 +2128,13 @@ export const statsUpdateHandler = async (ctx: CommandContext) => {
     await ctx.deleteMessage(statusMsg.message_id);
     await replyWithAutoDelete(ctx, "✅ Статистика успешно пересчитана!");
   } catch (error) {
-    console.error("[ERROR] /stats_update:", error);
+    logger.error(`[ERROR] /stats_update: ${JSON.stringify(error, null, 2)}`);
     await replyWithAutoDelete(ctx, "❌ Ошибка при пересчёте.");
   }
 };
 
 export const helpHandler = async (ctx: CommandContext) => {
-  console.log("[HANDLER] /help вызван");
+  logger.info("[HANDLER] /help вызван");
   await deleteCommandMessage(ctx);
 
   const helpMessage = [
@@ -2112,7 +2341,7 @@ export const editedMessageHandler = async (ctx: Context) => {
 // backend/src/telegram/middlewares.ts
 
 ```typescript
-import { logger } from "../config/logger";
+import { logger } from "@/config/logger";
 
 import { Context } from "telegraf";
 
@@ -2123,8 +2352,10 @@ export async function deleteCommandMessage(ctx: Context) {
       logger.info(
         `[DELETE] Сообщение команды ${ctx.message.message_id} удалено`,
       );
-    } catch (e) {
-      console.error("[DELETE] Не удалось удалить сообщение команды:", e);
+    } catch (error) {
+      logger.error(
+        `[DELETE] Не удалось удалить сообщение команды: ${JSON.stringify(error, null, 2)}`,
+      );
     }
   }
 }
@@ -2141,26 +2372,30 @@ export async function replyWithAutoDelete(
       try {
         await ctx.telegram.deleteMessage(ctx.chat!.id, sent.message_id);
         logger.info(`[AUTODELETE] Сообщение ${sent.message_id} удалено`);
-      } catch (e) {
-        console.error("[AUTODELETE] Ошибка удаления:", e);
+      } catch (error) {
+        logger.error(
+          `[AUTODELETE] Ошибка удаления: ${JSON.stringify(error, null, 2)}`,
+        );
       }
     }, delayMs);
     return sent;
   } catch (error) {
-    console.error("[REPLY] Ошибка отправки:", error);
+    logger.error(`[REPLY] Ошибка отправки: ${JSON.stringify(error, null, 2)}`);
     throw error;
   }
 }
 
 export async function errorHandler(err: unknown, ctx: Context) {
-  console.error("[BOT ERROR]", err);
+  logger.error(`[BOT ERROR]: ${JSON.stringify(err, null, 2)}`);
   try {
     await replyWithAutoDelete(
       ctx,
       "❌ Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.",
     );
-  } catch (e) {
-    console.error("[BOT ERROR] Не удалось отправить сообщение об ошибке:", e);
+  } catch (error) {
+    logger.error(
+      `[BOT ERROR] Не удалось отправить сообщение об ошибке: ${JSON.stringify(error, null, 2)}`,
+    );
   }
 }
 
