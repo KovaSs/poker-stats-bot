@@ -46,6 +46,12 @@ export function initDB(): Database.Database {
     )
   `);
 
+  // Создание индексов для ускорения запросов
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_transactions_game_id ON transactions(game_id);
+    CREATE INDEX IF NOT EXISTS idx_games_game_date ON games(game_date);
+  `);
+
   // Миграция старой таблицы user_stats (если есть)
   const tableExists = db
     .prepare(
