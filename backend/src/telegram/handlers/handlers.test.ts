@@ -7,7 +7,6 @@ import * as middlewares from "../middlewares";
 import { logger } from "@/config/logger";
 import type { CommandContext } from "@/types/telegram";
 
-// Моки зависимостей
 vi.mock("@/services", () => ({
   StatsService: {
     getFilteredStats: vi.fn(),
@@ -68,7 +67,7 @@ function createMockContext(overrides: Partial<any> = {}): any {
 describe("handlers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers(); // сбрасываем фейковые таймеры перед каждым тестом
+    vi.useRealTimers();
   });
 
   afterEach(() => {
@@ -377,6 +376,31 @@ describe("handlers", () => {
         expect.stringContaining("Не найдено ни одной корректной записи"),
       );
     });
+
+    it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 555,
+          text: "@testbot game 16.02.2025\nВход:\n+500 | User",
+          entities: [{ type: "mention", offset: 0, length: 8 }],
+        },
+      });
+      const testError = new Error("Test error");
+      (ParserService.extractGameDateFromText as any).mockImplementation(() => {
+        throw testError;
+      });
+
+      await handlers.textHandler(ctx as Context);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("[ERROR] textHandler"),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "❌ Произошла ошибка при обработке сообщения.",
+      );
+      expect(GameService.createGame).not.toHaveBeenCalled();
+    });
   });
 
   describe("photoHandler", () => {
@@ -423,6 +447,31 @@ describe("handlers", () => {
       await handlers.photoHandler(ctx as Context);
 
       expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
+      expect(GameService.createGame).not.toHaveBeenCalled();
+    });
+
+    it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 777,
+          caption: "@testbot game 20.03.2026\nВход:\n+1000 | PhotoUser",
+          caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+        },
+      });
+      const testError = new Error("Photo processing error");
+      (ParserService.extractGameDateFromText as any).mockImplementation(() => {
+        throw testError;
+      });
+
+      await handlers.photoHandler(ctx as Context);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("[ERROR] photoHandler"),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "❌ Произошла ошибка при обработке фотографии.",
+      );
       expect(GameService.createGame).not.toHaveBeenCalled();
     });
   });
@@ -510,6 +559,31 @@ describe("handlers", () => {
 
       expect(GameService.createGame).not.toHaveBeenCalled();
       expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
+    });
+
+    it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
+      const ctx = createMockContext({
+        editedMessage: {
+          chat: { id: 12345 },
+          message_id: 1000,
+          text: "game 15.02.2026\nВход:\n+300 | Editor",
+        },
+      });
+      const testError = new Error("Edit processing error");
+      (GameRepository.findByChatAndMessage as any).mockImplementation(() => {
+        throw testError;
+      });
+
+      await handlers.editedMessageHandler(ctx as Context);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("[ERROR] editedMessageHandler"),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "❌ Произошла ошибка при обработке редактирования.",
+      );
+      expect(GameService.updateGame).not.toHaveBeenCalled();
     });
   });
 });
