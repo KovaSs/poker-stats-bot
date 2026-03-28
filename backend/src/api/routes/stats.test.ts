@@ -1,10 +1,11 @@
+import { vi, describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
-import statsRouter from "./stats";
-import { StatsService } from "../../services";
-import { vi, describe, it, expect, beforeEach } from "vitest";
 
-vi.mock("../../services", () => ({
+import { StatsService } from "@/services";
+import statsRouter from "./stats";
+
+vi.mock("@/services", () => ({
   StatsService: {
     getFilteredStats: vi.fn(),
   },

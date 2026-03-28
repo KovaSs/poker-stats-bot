@@ -1,7 +1,7 @@
 import express from "express";
 
-import { logger } from "../config/logger";
-import { API_PORT } from "../config/env";
+import { logger } from "@/config/logger";
+import { API_PORT } from "@/config/env";
 
 import statsRouter from "./routes/stats";
 

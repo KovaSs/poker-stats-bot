@@ -1,6 +1,6 @@
 import { Telegraf } from "telegraf";
 
-import { logger } from "../config/logger";
+import { logger } from "@/config/logger";
 
 import { errorHandler } from "./middlewares";
 import * as handlers from "./handlers";

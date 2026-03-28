@@ -1,6 +1,5 @@
 import { logger } from "@/config/logger";
-
-import { getDB } from "../../connection";
+import { getDB } from "@/db/connection";
 
 export interface TransactionRow {
   type: "in" | "out";

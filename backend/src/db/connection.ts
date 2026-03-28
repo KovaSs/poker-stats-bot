@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-import { logger } from "../config/logger";
+import { logger } from "@/config/logger";
 
 let db: Database.Database;
 
