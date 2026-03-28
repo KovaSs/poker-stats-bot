@@ -1,6 +1,6 @@
 import { GameRepository, TransactionRepository } from "@/db/repositories";
 
-import { ParsedTransaction } from "./parser.service";
+import type { ParsedTransaction } from "./parser.service";
 
 export const GameService = {
   createGame(

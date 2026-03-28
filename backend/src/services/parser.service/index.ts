@@ -1,1 +1,1 @@
-export * as ParserService from "./parser.service";
+export { ParserService, type ParsedTransaction } from "./parser.service";
