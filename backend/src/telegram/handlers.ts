@@ -1,14 +1,15 @@
 import { Context } from "telegraf";
 
-import { StatsService, GameService, ParserService } from "../services";
-import { GameRepository } from "../db/repositories";
+import { StatsService, GameService, ParserService } from "@/services";
+import { GameRepository } from "@/db/repositories";
+import { logger } from "@/config/logger";
 
 import { deleteCommandMessage, replyWithAutoDelete } from "./middlewares";
 
-import type { CommandContext } from "../types/telegram";
+import type { CommandContext } from "@/types/telegram";
 
 export const statsHandler = async (ctx: CommandContext) => {
-  console.log(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
+  logger.info(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
   await deleteCommandMessage(ctx);
 
   try {
@@ -54,13 +55,13 @@ export const statsHandler = async (ctx: CommandContext) => {
     message += "```";
     await replyWithAutoDelete(ctx, message, { parse_mode: "Markdown" });
   } catch (error) {
-    console.error("[ERROR] /stats:", error);
+    logger.error(`[ERROR] /stats: ${JSON.stringify(error, null, 2)}`);
     await replyWithAutoDelete(ctx, "❌ Ошибка при загрузке статистики.");
   }
 };
 
 export const topHandler = async (ctx: CommandContext) => {
-  console.log(`[HANDLER] /top вызван пользователем ${ctx.from?.id}`);
+  logger.info(`[HANDLER] /top вызван пользователем ${ctx.from?.id}`);
   await deleteCommandMessage(ctx);
 
   try {
@@ -101,13 +102,13 @@ export const topHandler = async (ctx: CommandContext) => {
 
     await replyWithAutoDelete(ctx, title + top);
   } catch (error) {
-    console.error("[ERROR] /top:", error);
+    logger.error(`[ERROR] /top: ${JSON.stringify(error, null, 2)}`);
     await replyWithAutoDelete(ctx, "❌ Ошибка при загрузке топа.");
   }
 };
 
 export const statsUpdateHandler = async (ctx: CommandContext) => {
-  console.log("[HANDLER] /stats_update вызван");
+  logger.info("[HANDLER] /stats_update вызван");
   await deleteCommandMessage(ctx);
 
   try {
@@ -127,13 +128,13 @@ export const statsUpdateHandler = async (ctx: CommandContext) => {
     await ctx.deleteMessage(statusMsg.message_id);
     await replyWithAutoDelete(ctx, "✅ Статистика успешно пересчитана!");
   } catch (error) {
-    console.error("[ERROR] /stats_update:", error);
+    logger.error(`[ERROR] /stats_update: ${JSON.stringify(error, null, 2)}`);
     await replyWithAutoDelete(ctx, "❌ Ошибка при пересчёте.");
   }
 };
 
 export const helpHandler = async (ctx: CommandContext) => {
-  console.log("[HANDLER] /help вызван");
+  logger.info("[HANDLER] /help вызван");
   await deleteCommandMessage(ctx);
 
   const helpMessage = [

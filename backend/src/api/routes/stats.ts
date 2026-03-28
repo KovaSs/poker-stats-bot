@@ -1,6 +1,7 @@
 import { Router } from "express";
 
-import { StatsService } from "../../services";
+import { logger } from "@/config/logger";
+import { StatsService } from "@/services";
 
 const router = Router();
 
@@ -10,7 +11,7 @@ router.get("/", (req, res) => {
     const stats = StatsService.getFilteredStats(filter);
     res.json(stats);
   } catch (error) {
-    console.error("[API] /stats error:", error);
+    logger.error(`[API] /stats error: ${JSON.stringify(error, null, 2)}`);
     res.status(500).json({ error: "Internal server error" });
   }
 });

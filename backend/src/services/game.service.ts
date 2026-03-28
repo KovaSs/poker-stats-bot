@@ -1,4 +1,4 @@
-import { GameRepository, TransactionRepository } from "../db/repositories";
+import { GameRepository, TransactionRepository } from "@/db/repositories";
 
 import { ParsedTransaction } from "./parser.service";
 
