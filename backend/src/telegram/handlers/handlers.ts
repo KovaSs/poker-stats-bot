@@ -4,9 +4,15 @@ import { StatsService, GameService, ParserService } from "@/services";
 import { GameRepository } from "@/db/repositories";
 import { logger } from "@/config/logger";
 
-import { deleteCommandMessage, replyWithAutoDelete } from "./middlewares";
+import { deleteCommandMessage, replyWithAutoDelete } from "../middlewares";
 
 import type { CommandContext } from "@/types/telegram";
+
+function escapeMarkdown(text: string): string {
+  // Экранируем символы, имеющие специальное значение в Markdown
+  const specialChars = /[_*[\]()~`>#+\-=|{}.!]/g;
+  return text.replace(specialChars, "\\$&");
+}
 
 export const statsHandler = async (ctx: CommandContext) => {
   logger.info(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
@@ -98,7 +104,8 @@ export const topHandler = async (ctx: CommandContext) => {
       .slice(0, 10)
       .map((u, i) => {
         const sign = u.score >= 0 ? "+" : "";
-        return `${i + 1}. ${u.username} — ${sign}${u.score}`;
+        const escapedUsername = escapeMarkdown(u.username);
+        return `${i + 1}. ${escapedUsername} — ${sign}${u.score}`;
       })
       .join("\n");
 

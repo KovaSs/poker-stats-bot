@@ -1,7 +1,19 @@
+import { logger } from "@/config/logger";
+
 export interface ParsedTransaction {
   username: string;
   amount: number;
   type: "in" | "out";
+}
+
+function sanitizeUsername(username: string): string | null {
+  // Удаляем управляющие символы
+  let cleaned = username.replace(/[\x00-\x1F\x7F]/g, "");
+  cleaned = cleaned.trim();
+  if (cleaned.length === 0) return null;
+  // Ограничиваем длину
+  if (cleaned.length > 50) cleaned = cleaned.substring(0, 50);
+  return cleaned;
 }
 
 export const ParserService = {
@@ -30,11 +42,18 @@ export const ParserService = {
           username = username.substring(0, commentIndex).trim();
 
         if (username) {
-          transactions.push({
-            username,
-            amount: points,
-            type: currentType,
-          });
+          const sanitized = sanitizeUsername(username);
+          if (sanitized) {
+            transactions.push({
+              username: sanitized,
+              amount: points,
+              type: currentType,
+            });
+          } else {
+            logger.warn(
+              `[Parser] Пропущена транзакция с некорректным username: "${username}"`,
+            );
+          }
         }
       }
     }

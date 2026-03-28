@@ -1,6 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+import { logger } from "@/config/logger";
 
 import { ParserService } from "./parser.service";
+
+vi.mock("@/config/logger", () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 describe("parser.service", () => {
   describe("parseTransactions", () => {
@@ -50,6 +60,36 @@ describe("parser.service", () => {
       const lines = ["Вход:", "+500 | User // comment"];
       const result = ParserService.parseTransactions(lines);
       expect(result[0].username).toBe("User");
+    });
+
+    describe("санитизация username", () => {
+      it("удаляет управляющие символы", () => {
+        const lines = ["Вход:", "+500 | User\x00\x01Name"];
+        const result = ParserService.parseTransactions(lines);
+        expect(result).toHaveLength(1);
+        expect(result[0].username).toBe("UserName");
+      });
+
+      it("обрезает длинный username до 50 символов", () => {
+        const longName = "a".repeat(60);
+        const lines = ["Вход:", `+500 | ${longName}`];
+        const result = ParserService.parseTransactions(lines);
+        expect(result).toHaveLength(1);
+        expect(result[0].username.length).toBe(50);
+        expect(result[0].username).toBe("a".repeat(50));
+      });
+
+      it("пропускает пустой username после очистки и логирует предупреждение", () => {
+        const warnSpy = vi.spyOn(logger, "warn");
+        const lines = ["Вход:", "+500 | \x00\x01"];
+        const result = ParserService.parseTransactions(lines);
+        expect(result).toHaveLength(0);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            "Пропущена транзакция с некорректным username",
+          ),
+        );
+      });
     });
   });
 

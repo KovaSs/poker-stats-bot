@@ -1,6 +1,6 @@
 {
   "name": "telegram-stats-bot-backend",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "scripts": {
     "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
