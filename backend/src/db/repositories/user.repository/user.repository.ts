@@ -1,12 +1,13 @@
-import { logger } from "../../config/logger";
-import { getDB } from "../connection";
+import { logger } from "@/config/logger";
+
+import { getDB } from "../../connection";
 
 export interface UserRow {
-  username: string;
   telegram_id: number | null;
-  total_in: number;
-  total_out: number;
   games_count: number;
+  total_out: number;
+  username: string;
+  total_in: number;
   game_ids: string; // JSON array
 }
 

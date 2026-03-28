@@ -1,5 +1,5 @@
-import { TransactionRepository, UserRepository } from "../db/repositories";
-import { logger } from "../config/logger";
+import { TransactionRepository, UserRepository } from "@/db/repositories";
+import { logger } from "@/config/logger";
 
 export type Filter = { year?: string; all?: boolean; sinceDate?: string };
 

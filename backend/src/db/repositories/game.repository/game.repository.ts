@@ -1,5 +1,6 @@
-import { getDB } from "../connection";
-import { logger } from "../../config/logger";
+import { logger } from "@/config/logger";
+
+import { getDB } from "../../connection";
 
 export interface GameRow {
   id: number;

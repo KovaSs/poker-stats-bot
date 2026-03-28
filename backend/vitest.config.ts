@@ -3,14 +3,14 @@ import path from "path";
 
 export default defineConfig({
   test: {
-    globals: true,
+    passWithNoTests: true,
     environment: "node",
+    globals: true,
     coverage: {
-      provider: "v8",
-      reporter: ["text", "json", "html"],
       exclude: ["**/node_modules/**", "**/dist/**", "**/types/**"],
+      reporter: ["text", "json", "html"],
+      provider: "v8",
     },
-    // Исключаем тесты, которые используют реальную БД (если нужно)
     testTimeout: 10000,
   },
   resolve: {

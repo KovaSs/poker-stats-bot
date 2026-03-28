@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Database from "better-sqlite3";
 
-import { getDB } from "../connection";
+import { getDB } from "../../connection";
 
 import { TransactionRepository } from "./transaction.repository";
 
-vi.mock("../connection", () => ({
+vi.mock("../../connection", () => ({
   getDB: vi.fn(),
 }));
 
@@ -52,8 +52,8 @@ describe("TransactionRepository", () => {
         .prepare(`SELECT * FROM transactions WHERE id = ?`)
         .get(id);
       expect(row).toMatchObject({
-        game_id: gameId,
         username: "user1",
+        game_id: gameId,
         amount: 100,
         type: "in",
       });

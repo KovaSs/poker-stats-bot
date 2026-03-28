@@ -1,11 +1,10 @@
-// backend/src/db/repositories/user.repository.test.ts
-
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Database from "better-sqlite3";
-import { UserRepository } from "./user.repository";
-import { getDB } from "../connection";
 
-vi.mock("../connection", () => ({
+import { UserRepository } from "./user.repository";
+import { getDB } from "../../connection";
+
+vi.mock("../../connection", () => ({
   getDB: vi.fn(),
 }));
 

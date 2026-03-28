@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Database from "better-sqlite3";
 
-import { getDB } from "../connection";
+import { getDB } from "../../connection";
 
 import { GameRepository } from "./game.repository";
 
-// Мокаем getDB, чтобы возвращать тестовую БД
-vi.mock("../connection", () => ({
+vi.mock("../../connection", () => ({
   getDB: vi.fn(),
 }));
 
