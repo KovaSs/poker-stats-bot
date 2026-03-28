@@ -46,7 +46,7 @@ describe("StatsService", () => {
     TransactionRepository.add(gameId, "user1", 100, "in");
     TransactionRepository.add(gameId, "user1", 200, "out");
 
-    const stats = StatsService.getFilteredStats("2024");
+    const stats = StatsService.getFilteredStats(1, "2024");
     expect(stats).toHaveLength(1);
     expect(stats[0].username).toBe("user1");
     expect(stats[0].total_in).toBe(100);
@@ -58,7 +58,7 @@ describe("StatsService", () => {
     const gameId = GameRepository.create(1, 1, "2024-01-01");
     TransactionRepository.add(gameId, "user1", 100, "in");
 
-    const stats = StatsService.getFilteredStats(); // последний год (текущий 2026)
+    const stats = StatsService.getFilteredStats(1); // последний год (текущий 2026)
     expect(stats).toHaveLength(0);
   });
 
@@ -71,7 +71,7 @@ describe("StatsService", () => {
     TransactionRepository.add(gameId2, "user2", 50, "in");
     TransactionRepository.add(gameId2, "user2", 100, "out"); // diff +50
 
-    const scores = StatsService.getFilteredScores("2024");
+    const scores = StatsService.getFilteredScores(1, "2024");
     expect(scores).toEqual([
       { username: "user1", score: 200 },
       { username: "user2", score: 50 },
@@ -90,15 +90,15 @@ describe("StatsService", () => {
     expect(users).toHaveLength(2);
     expect(users[0]).toMatchObject({
       username: "user1",
-      total_in: 100,
-      total_out: 200,
       games_count: 1,
+      total_out: 200,
+      total_in: 100,
     });
     expect(users[1]).toMatchObject({
       username: "user2",
+      games_count: 1,
       total_in: 50,
       total_out: 0,
-      games_count: 1,
     });
   });
 });

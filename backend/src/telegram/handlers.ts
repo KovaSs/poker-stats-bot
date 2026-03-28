@@ -28,7 +28,8 @@ export const statsHandler = async (ctx: CommandContext) => {
       }
     }
 
-    const stats = StatsService.getFilteredStats(filter);
+    const chatId = ctx.chat!.id;
+    const stats = StatsService.getFilteredStats(chatId, filter);
     if (stats.length === 0) {
       await replyWithAutoDelete(ctx, "📊 Пока нет данных за указанный период.");
       return;
@@ -80,7 +81,8 @@ export const topHandler = async (ctx: CommandContext) => {
       }
     }
 
-    const scores = StatsService.getFilteredScores(filter);
+    const chatId = ctx.chat!.id;
+    const scores = StatsService.getFilteredScores(chatId, filter);
     if (scores.length === 0) {
       await replyWithAutoDelete(ctx, "📊 Пока нет данных за указанный период.");
       return;

@@ -3,9 +3,10 @@ import request from "supertest";
 import express from "express";
 
 import { StatsService } from "@/services";
+
 import statsRouter from "./stats";
 
-vi.mock("@/services", () => ({
+vi.mock("../../services", () => ({
   StatsService: {
     getFilteredStats: vi.fn(),
   },
@@ -25,22 +26,22 @@ describe("GET /stats", () => {
     ];
     (StatsService.getFilteredStats as any).mockReturnValue(mockStats);
 
-    const res = await request(app).get("/stats");
+    const res = await request(app).get("/stats?chatId=123");
     expect(res.status).toBe(200);
     expect(res.body).toEqual(mockStats);
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(undefined);
+    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(123, undefined);
   });
 
   it("передаёт параметр filter", async () => {
-    await request(app).get("/stats?filter=2024");
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith("2024");
+    await request(app).get("/stats?chatId=123&filter=2024");
+    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(123, "2024");
   });
 
   it("обрабатывает ошибки сервиса", async () => {
     (StatsService.getFilteredStats as any).mockImplementation(() => {
       throw new Error("DB error");
     });
-    const res = await request(app).get("/stats");
+    const res = await request(app).get("/stats?chatId=123");
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: "Internal server error" });
   });

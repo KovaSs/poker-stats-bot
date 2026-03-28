@@ -143,7 +143,7 @@ describe("TransactionRepository", () => {
     });
 
     it("возвращает статистику без фильтрации", () => {
-      const stats = TransactionRepository.getFilteredStats();
+      const stats = TransactionRepository.getFilteredStats(123);
       expect(stats).toHaveLength(2);
       // Проверяем порядок по разнице (out - in) DESC
       // user1: total_in=120, total_out=50 -> разница -70 (убыток)
@@ -160,7 +160,7 @@ describe("TransactionRepository", () => {
     });
 
     it("фильтрует по году", () => {
-      const stats2024 = TransactionRepository.getFilteredStats({
+      const stats2024 = TransactionRepository.getFilteredStats(123, {
         year: "2024",
       });
       expect(stats2024).toHaveLength(2);
@@ -177,7 +177,7 @@ describe("TransactionRepository", () => {
       expect(stats2024[1].total_out).toBe(50);
       expect(stats2024[1].games_count).toBe(1);
 
-      const stats2025 = TransactionRepository.getFilteredStats({
+      const stats2025 = TransactionRepository.getFilteredStats(123, {
         year: "2025",
       });
       expect(stats2025).toHaveLength(2);
@@ -197,7 +197,7 @@ describe("TransactionRepository", () => {
 
     it('фильтрует по дате "с"', () => {
       const sinceDate = "2025-01-01";
-      const stats = TransactionRepository.getFilteredStats({ sinceDate });
+      const stats = TransactionRepository.getFilteredStats(123, { sinceDate });
       expect(stats).toHaveLength(2);
       // должны попасть только игры с game_date >= sinceDate (только игра2, 2025-06-20)
       // user2: in=0, out=10 → diff = +10
@@ -233,7 +233,7 @@ describe("TransactionRepository", () => {
     });
 
     it("возвращает топ по разнице (score = total_out - total_in)", () => {
-      const scores = TransactionRepository.getFilteredScores();
+      const scores = TransactionRepository.getFilteredScores(123);
       // user1: (50+0) - (100+20) = -70
       // user2: (0+10) - (30+0) = -20
       expect(scores).toEqual([
@@ -243,7 +243,7 @@ describe("TransactionRepository", () => {
     });
 
     it("фильтрует по году", () => {
-      const scores2024 = TransactionRepository.getFilteredScores({
+      const scores2024 = TransactionRepository.getFilteredScores(123, {
         year: "2024",
       });
       expect(scores2024).toEqual([
@@ -251,7 +251,7 @@ describe("TransactionRepository", () => {
         { username: "user1", score: -50 }, // in=100 out=50 => -50
       ]);
 
-      const scores2025 = TransactionRepository.getFilteredScores({
+      const scores2025 = TransactionRepository.getFilteredScores(123, {
         year: "2025",
       });
       expect(scores2025).toEqual([
@@ -262,7 +262,9 @@ describe("TransactionRepository", () => {
 
     it('фильтрует по дате "с"', () => {
       const sinceDate = "2025-01-01";
-      const scores = TransactionRepository.getFilteredScores({ sinceDate });
+      const scores = TransactionRepository.getFilteredScores(123, {
+        sinceDate,
+      });
       expect(scores).toEqual([
         { username: "user2", score: 10 },
         { username: "user1", score: -20 },

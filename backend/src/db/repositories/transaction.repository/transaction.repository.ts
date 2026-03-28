@@ -50,7 +50,10 @@ export const TransactionRepository = {
     return stmt.all() as any[];
   },
 
-  getFilteredStats(filter?: { year?: string; sinceDate?: string }): {
+  getFilteredStats(
+    chatId: number,
+    filter?: { year?: string; sinceDate?: string },
+  ): {
     username: string;
     total_in: number;
     total_out: number;
@@ -64,14 +67,15 @@ export const TransactionRepository = {
         COUNT(DISTINCT t.game_id) as games_count
       FROM transactions t
       JOIN games g ON t.game_id = g.id
+      WHERE g.chat_id = ?
     `;
-    const params: any[] = [];
+    const params: any[] = [chatId];
 
     if (filter?.year) {
-      sql += ` WHERE g.game_date LIKE ?`;
+      sql += ` AND g.game_date LIKE ?`;
       params.push(`${filter.year}%`);
     } else if (filter?.sinceDate) {
-      sql += ` WHERE g.game_date >= ?`;
+      sql += ` AND g.game_date >= ?`;
       params.push(filter.sinceDate);
     }
 
@@ -83,25 +87,26 @@ export const TransactionRepository = {
     return rows;
   },
 
-  getFilteredScores(filter?: {
-    year?: string;
-    sinceDate?: string;
-  }): { username: string; score: number }[] {
+  getFilteredScores(
+    chatId: number,
+    filter?: { year?: string; sinceDate?: string },
+  ): { username: string; score: number }[] {
     let sql = `
       SELECT
         t.username,
         (COALESCE(SUM(CASE WHEN t.type = 'out' THEN t.amount ELSE 0 END), 0) -
-         COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0)) as score
+          COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0)) as score
       FROM transactions t
       JOIN games g ON t.game_id = g.id
+      WHERE g.chat_id = ?
     `;
-    const params: any[] = [];
+    const params: any[] = [chatId];
 
     if (filter?.year) {
-      sql += ` WHERE g.game_date LIKE ?`;
+      sql += ` AND g.game_date LIKE ?`;
       params.push(`${filter.year}%`);
     } else if (filter?.sinceDate) {
-      sql += ` WHERE g.game_date >= ?`;
+      sql += ` AND g.game_date >= ?`;
       params.push(filter.sinceDate);
     }
 

@@ -1,9 +1,9 @@
-import { BOT_TOKEN, TELEGRAM_API_URL } from "./config/env";
-import { setupBot } from "./telegram/bot";
-import { initDB } from "./db/connection";
-import { logger } from "./config/logger";
+import { BOT_TOKEN, TELEGRAM_API_URL } from "@/config/env";
+import { setupBot } from "@/telegram/bot";
+import { initDB } from "@/db/connection";
+import { logger } from "@/config/logger";
 
-// import { startApiServer } from './api/server';
+// import { startApiServer } from "./api/server";
 
 async function main() {
   initDB();

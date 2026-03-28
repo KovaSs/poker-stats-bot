@@ -18,26 +18,30 @@ function buildFilter(filter?: string | "all"): Filter {
 }
 
 export const StatsService = {
-  getFilteredStats(filter?: string | "all") {
+  getFilteredStats(chatId: number, filter?: string | "all") {
     const f = buildFilter(filter);
     if (f.all) {
-      return TransactionRepository.getFilteredStats();
+      return TransactionRepository.getFilteredStats(chatId);
     }
     if (f.year) {
-      return TransactionRepository.getFilteredStats({ year: f.year });
+      return TransactionRepository.getFilteredStats(chatId, { year: f.year });
     }
-    return TransactionRepository.getFilteredStats({ sinceDate: f.sinceDate });
+    return TransactionRepository.getFilteredStats(chatId, {
+      sinceDate: f.sinceDate,
+    });
   },
 
-  getFilteredScores(filter?: string | "all") {
+  getFilteredScores(chatId: number, filter?: string | "all") {
     const f = buildFilter(filter);
     if (f.all) {
-      return TransactionRepository.getFilteredScores();
+      return TransactionRepository.getFilteredScores(chatId);
     }
     if (f.year) {
-      return TransactionRepository.getFilteredScores({ year: f.year });
+      return TransactionRepository.getFilteredScores(chatId, { year: f.year });
     }
-    return TransactionRepository.getFilteredScores({ sinceDate: f.sinceDate });
+    return TransactionRepository.getFilteredScores(chatId, {
+      sinceDate: f.sinceDate,
+    });
   },
 
   recalcStats(): void {
