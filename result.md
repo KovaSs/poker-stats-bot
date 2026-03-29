@@ -1,8 +1,8 @@
 # Анализ структуры проекта
 
-**Дата генерации:** 3/28/2026, 4:38:09 PM
-**Обработано файлов:** 55
-**Всего элементов (с учётом папок):** 76
+**Дата генерации:** 3/28/2026, 5:34:20 PM
+**Обработано файлов:** 59
+**Всего элементов (с учётом папок):** 82
 
 ## Структура проекта
 
@@ -18,6 +18,8 @@
 │   │   │   ├── env.ts
 │   │   │   └── logger.ts
 │   │   ├── db/
+│   │   │   ├── migrations/
+│   │   │   │   └── index.ts
 │   │   │   ├── repositories/
 │   │   │   │   ├── game.repository/
 │   │   │   │   │   ├── game.repository.test.ts
@@ -32,7 +34,8 @@
 │   │   │   │   │   ├── user.repository.test.ts
 │   │   │   │   │   └── user.repository.ts
 │   │   │   │   └── index.ts
-│   │   │   └── connection.ts
+│   │   │   ├── connection.ts
+│   │   │   └── migrator.ts
 │   │   ├── services/
 │   │   │   ├── game.service/
 │   │   │   │   ├── game.service.test.ts
@@ -48,8 +51,11 @@
 │   │   │   │   └── stats.service.ts
 │   │   │   └── index.ts
 │   │   ├── telegram/
+│   │   │   ├── handlers/
+│   │   │   │   ├── handlers.test.ts
+│   │   │   │   ├── handlers.ts
+│   │   │   │   └── index.ts
 │   │   │   ├── bot.ts
-│   │   │   ├── handlers.ts
 │   │   │   └── middlewares.ts
 │   │   ├── types/
 │   │   │   └── telegram.ts
@@ -94,6 +100,8 @@
 - [backend/src/config/env.ts](#backend-src-config-env_ts)
 - [backend/src/config/logger.ts](#backend-src-config-logger_ts)
 - [backend/src/db/connection.ts](#backend-src-db-connection_ts)
+- [backend/src/db/migrations/index.ts](#backend-src-db-migrations-index_ts)
+- [backend/src/db/migrator.ts](#backend-src-db-migrator_ts)
 - [backend/src/db/repositories/game.repository/game.repository.test.ts](#backend-src-db-repositories-game_repository-game_repository_test_ts)
 - [backend/src/db/repositories/game.repository/game.repository.ts](#backend-src-db-repositories-game_repository-game_repository_ts)
 - [backend/src/db/repositories/game.repository/index.ts](#backend-src-db-repositories-game_repository-index_ts)
@@ -116,7 +124,9 @@
 - [backend/src/services/stats.service/stats.service.test.ts](#backend-src-services-stats_service-stats_service_test_ts)
 - [backend/src/services/stats.service/stats.service.ts](#backend-src-services-stats_service-stats_service_ts)
 - [backend/src/telegram/bot.ts](#backend-src-telegram-bot_ts)
-- [backend/src/telegram/handlers.ts](#backend-src-telegram-handlers_ts)
+- [backend/src/telegram/handlers/handlers.test.ts](#backend-src-telegram-handlers-handlers_test_ts)
+- [backend/src/telegram/handlers/handlers.ts](#backend-src-telegram-handlers-handlers_ts)
+- [backend/src/telegram/handlers/index.ts](#backend-src-telegram-handlers-index_ts)
 - [backend/src/telegram/middlewares.ts](#backend-src-telegram-middlewares_ts)
 - [backend/src/types/telegram.ts](#backend-src-types-telegram_ts)
 - [backend/tsconfig.json](#backend-tsconfig_json)
@@ -150,7 +160,7 @@
 ```json
 {
   "name": "telegram-stats-bot-backend",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "scripts": {
     "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
@@ -362,6 +372,8 @@ import path from "path";
 
 import { logger } from "@/config/logger";
 
+import { runMigrations } from "./migrator";
+
 let db: Database.Database;
 
 export function initDB(): Database.Database {
@@ -369,65 +381,8 @@ export function initDB(): Database.Database {
   db = new Database(dbPath);
   logger.info("[DB] База данных инициализирована");
 
-  // Таблица games
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS games (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      chat_id INTEGER,
-      message_id INTEGER,
-      game_date TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  // Таблица transactions
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      game_id INTEGER,
-      username TEXT,
-      amount INTEGER,
-      type TEXT CHECK(type IN ('in', 'out')),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(game_id) REFERENCES games(id)
-    )
-  `);
-
-  // Таблица users
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      username TEXT PRIMARY KEY,
-      telegram_id INTEGER,
-      total_in INTEGER DEFAULT 0,
-      total_out INTEGER DEFAULT 0,
-      games_count INTEGER DEFAULT 0,
-      game_ids TEXT DEFAULT '[]'
-    )
-  `);
-
-  // Создание индексов для ускорения запросов
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_transactions_game_id ON transactions(game_id);
-    CREATE INDEX IF NOT EXISTS idx_games_game_date ON games(game_date);
-  `);
-
-  // Миграция старой таблицы user_stats (если есть)
-  const tableExists = db
-    .prepare(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name='user_stats'`,
-    )
-    .get();
-  if (tableExists) {
-    logger.info(
-      "[DB] Обнаружена старая таблица user_stats, выполняем миграцию...",
-    );
-    db.exec(`
-      INSERT OR IGNORE INTO users (username, total_in, total_out)
-      SELECT username, total_in, total_out FROM user_stats
-    `);
-    db.exec(`DROP TABLE user_stats`);
-    logger.info("[DB] Миграция завершена");
-  }
+  // Применяем миграции
+  runMigrations(db);
 
   return db;
 }
@@ -435,6 +390,130 @@ export function initDB(): Database.Database {
 export function getDB(): Database.Database {
   if (!db) throw new Error("DB not initialized");
   return db;
+}
+
+```
+
+// backend/src/db/migrations/index.ts
+
+```typescript
+import { Database } from "better-sqlite3";
+
+export interface Migration {
+  name: string;
+  up: (db: Database) => void;
+}
+
+export const migrations: Migration[] = [
+  {
+    name: "001_initial_schema",
+    up: (db: Database) => {
+      // Таблица games
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS games (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          chat_id INTEGER,
+          message_id INTEGER,
+          game_date TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Таблица transactions
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          game_id INTEGER,
+          username TEXT,
+          amount INTEGER,
+          type TEXT CHECK(type IN ('in', 'out')),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Таблица users
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+          username TEXT PRIMARY KEY,
+          telegram_id INTEGER,
+          total_in INTEGER DEFAULT 0,
+          total_out INTEGER DEFAULT 0,
+          games_count INTEGER DEFAULT 0,
+          game_ids TEXT DEFAULT '[]'
+        )
+      `);
+
+      // Индексы
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_transactions_game_id ON transactions(game_id);
+        CREATE INDEX IF NOT EXISTS idx_games_game_date ON games(game_date);
+      `);
+    },
+  },
+  {
+    name: "002_migrate_user_stats",
+    up: (db: Database) => {
+      // Проверяем существование старой таблицы user_stats
+      const tableExists = db
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='user_stats'`,
+        )
+        .get();
+      if (tableExists) {
+        db.exec(`
+          INSERT OR IGNORE INTO users (username, total_in, total_out)
+          SELECT username, total_in, total_out FROM user_stats
+        `);
+        db.exec(`DROP TABLE user_stats`);
+      }
+    },
+  },
+];
+
+```
+
+// backend/src/db/migrator.ts
+
+```typescript
+import { Database } from "better-sqlite3";
+
+import { logger } from "@/config/logger";
+
+import { migrations } from "./migrations";
+
+function ensureMigrationsTable(db: Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS migrations (
+      name TEXT PRIMARY KEY,
+      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+export function runMigrations(db: Database): void {
+  ensureMigrationsTable(db);
+
+  const applied = db
+    .prepare("SELECT name FROM migrations")
+    .all()
+    .map((row: any) => row.name);
+
+  for (const migration of migrations) {
+    if (!applied.includes(migration.name)) {
+      logger.info(`[DB] Applying migration: ${migration.name}`);
+      try {
+        migration.up(db);
+        db.prepare("INSERT INTO migrations (name) VALUES (?)").run(
+          migration.name,
+        );
+        logger.info(`[DB] Migration ${migration.name} applied successfully`);
+      } catch (error) {
+        logger.error({ error, migration: migration.name }, "Migration failed");
+        throw error; // останавливаем запуск приложения
+      }
+    }
+  }
 }
 
 ```
@@ -1609,9 +1688,19 @@ export { ParserService, type ParsedTransaction } from "./parser.service";
 // backend/src/services/parser.service/parser.service.test.ts
 
 ```typescript
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+import { logger } from "@/config/logger";
 
 import { ParserService } from "./parser.service";
+
+vi.mock("@/config/logger", () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 describe("parser.service", () => {
   describe("parseTransactions", () => {
@@ -1662,6 +1751,36 @@ describe("parser.service", () => {
       const result = ParserService.parseTransactions(lines);
       expect(result[0].username).toBe("User");
     });
+
+    describe("санитизация username", () => {
+      it("удаляет управляющие символы", () => {
+        const lines = ["Вход:", "+500 | User\x00\x01Name"];
+        const result = ParserService.parseTransactions(lines);
+        expect(result).toHaveLength(1);
+        expect(result[0].username).toBe("UserName");
+      });
+
+      it("обрезает длинный username до 50 символов", () => {
+        const longName = "a".repeat(60);
+        const lines = ["Вход:", `+500 | ${longName}`];
+        const result = ParserService.parseTransactions(lines);
+        expect(result).toHaveLength(1);
+        expect(result[0].username.length).toBe(50);
+        expect(result[0].username).toBe("a".repeat(50));
+      });
+
+      it("пропускает пустой username после очистки и логирует предупреждение", () => {
+        const warnSpy = vi.spyOn(logger, "warn");
+        const lines = ["Вход:", "+500 | \x00\x01"];
+        const result = ParserService.parseTransactions(lines);
+        expect(result).toHaveLength(0);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            "Пропущена транзакция с некорректным username",
+          ),
+        );
+      });
+    });
   });
 
   describe("extractGameDateFromText", () => {
@@ -1684,10 +1803,22 @@ describe("parser.service", () => {
 // backend/src/services/parser.service/parser.service.ts
 
 ```typescript
+import { logger } from "@/config/logger";
+
 export interface ParsedTransaction {
   username: string;
   amount: number;
   type: "in" | "out";
+}
+
+function sanitizeUsername(username: string): string | null {
+  // Удаляем управляющие символы
+  let cleaned = username.replace(/[\x00-\x1F\x7F]/g, "");
+  cleaned = cleaned.trim();
+  if (cleaned.length === 0) return null;
+  // Ограничиваем длину
+  if (cleaned.length > 50) cleaned = cleaned.substring(0, 50);
+  return cleaned;
 }
 
 export const ParserService = {
@@ -1716,11 +1847,18 @@ export const ParserService = {
           username = username.substring(0, commentIndex).trim();
 
         if (username) {
-          transactions.push({
-            username,
-            amount: points,
-            type: currentType,
-          });
+          const sanitized = sanitizeUsername(username);
+          if (sanitized) {
+            transactions.push({
+              username: sanitized,
+              amount: points,
+              type: currentType,
+            });
+          } else {
+            logger.warn(
+              `[Parser] Пропущена транзакция с некорректным username: "${username}"`,
+            );
+          }
         }
       }
     }
@@ -1993,7 +2131,602 @@ export function setupBot(token: string, apiRoot?: string) {
 
 ```
 
-// backend/src/telegram/handlers.ts
+// backend/src/telegram/handlers/handlers.test.ts
+
+```typescript
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { Context } from "telegraf";
+import { StatsService, GameService, ParserService } from "@/services";
+import { GameRepository } from "@/db/repositories";
+import * as handlers from "./handlers";
+import * as middlewares from "../middlewares";
+import { logger } from "@/config/logger";
+import type { CommandContext } from "@/types/telegram";
+
+vi.mock("@/services", () => ({
+  StatsService: {
+    getFilteredStats: vi.fn(),
+    getFilteredScores: vi.fn(),
+    recalcStats: vi.fn(),
+  },
+  GameService: {
+    createGame: vi.fn(),
+    addTransactions: vi.fn(),
+    updateGame: vi.fn(),
+    deleteGame: vi.fn(),
+  },
+  ParserService: {
+    parseTransactions: vi.fn(),
+    extractGameDateFromText: vi.fn(),
+  },
+}));
+
+vi.mock("@/db/repositories", () => ({
+  GameRepository: {
+    findByChatAndMessage: vi.fn(),
+  },
+}));
+
+vi.mock("../middlewares", () => ({
+  deleteCommandMessage: vi.fn(),
+  replyWithAutoDelete: vi.fn(),
+}));
+
+vi.mock("@/config/logger", () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+}));
+
+function createMockContext(overrides: Partial<any> = {}): any {
+  return {
+    chat: { id: 12345 },
+    from: { id: 67890, username: "testuser" },
+    message: {
+      message_id: 999,
+      text: "",
+      entities: [],
+    },
+    botInfo: { username: "testbot" },
+    reply: vi.fn(),
+    deleteMessage: vi.fn(),
+    telegram: {
+      editMessageText: vi.fn(),
+      deleteMessage: vi.fn(),
+    },
+    ...overrides,
+  };
+}
+
+describe("handlers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("statsHandler", () => {
+    it("должен показать статистику за последний год по умолчанию", async () => {
+      const ctx = createMockContext({
+        message: { text: "/stats", message_id: 1 },
+      });
+      const mockStats = [
+        { username: "user1", total_in: 100, total_out: 200, games_count: 1 },
+      ];
+      (StatsService.getFilteredStats as any).mockReturnValue(mockStats);
+
+      await handlers.statsHandler(ctx as CommandContext);
+
+      expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
+        12345,
+        undefined,
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("последний год"),
+        { parse_mode: "Markdown" },
+      );
+    });
+
+    it("должен обработать фильтр all", async () => {
+      const ctx = createMockContext({
+        message: { text: "/stats all", message_id: 1 },
+      });
+      (StatsService.getFilteredStats as any).mockReturnValue([]);
+
+      await handlers.statsHandler(ctx as CommandContext);
+
+      expect(StatsService.getFilteredStats).toHaveBeenCalledWith(12345, "all");
+    });
+
+    it("должен обработать фильтр года", async () => {
+      const ctx = createMockContext({
+        message: { text: "/stats 2024", message_id: 1 },
+      });
+      (StatsService.getFilteredStats as any).mockReturnValue([]);
+
+      await handlers.statsHandler(ctx as CommandContext);
+
+      expect(StatsService.getFilteredStats).toHaveBeenCalledWith(12345, "2024");
+    });
+
+    it("должен ответить ошибкой на неверный формат фильтра", async () => {
+      const ctx = createMockContext({
+        message: { text: "/stats invalid", message_id: 1 },
+      });
+
+      await handlers.statsHandler(ctx as CommandContext);
+
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("Неверный формат"),
+      );
+    });
+
+    it("должен сообщить об отсутствии данных", async () => {
+      const ctx = createMockContext({
+        message: { text: "/stats", message_id: 1 },
+      });
+      (StatsService.getFilteredStats as any).mockReturnValue([]);
+
+      await handlers.statsHandler(ctx as CommandContext);
+
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("Пока нет данных"),
+      );
+    });
+  });
+
+  describe("topHandler", () => {
+    it("должен экранировать специальные символы в username", async () => {
+      const ctx = createMockContext({
+        message: { text: "/top", message_id: 1 },
+      });
+      const mockScores = [
+        { username: "_test*", score: 100 },
+        { username: "normal", score: 50 },
+      ];
+      (StatsService.getFilteredScores as any).mockReturnValue(mockScores);
+
+      await handlers.topHandler(ctx as CommandContext);
+
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalled();
+      const message = (middlewares.replyWithAutoDelete as any).mock.calls[0][1];
+      expect(message).toContain("\\_test\\*");
+      expect(message).toContain("normal");
+    });
+
+    it("должен обработать фильтр all", async () => {
+      const ctx = createMockContext({
+        message: { text: "/top all", message_id: 1 },
+      });
+      (StatsService.getFilteredScores as any).mockReturnValue([]);
+
+      await handlers.topHandler(ctx as CommandContext);
+
+      expect(StatsService.getFilteredScores).toHaveBeenCalledWith(12345, "all");
+    });
+
+    it("должен ответить ошибкой на неверный фильтр", async () => {
+      const ctx = createMockContext({
+        message: { text: "/top wrong", message_id: 1 },
+      });
+
+      await handlers.topHandler(ctx as CommandContext);
+
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("Неверный формат"),
+      );
+    });
+  });
+
+  describe("statsUpdateHandler", () => {
+    it("должен выполнить пересчёт и удалить сообщение прогресса", async () => {
+      vi.useFakeTimers();
+
+      const ctx = createMockContext({
+        message: { text: "/stats_update", message_id: 1 },
+        reply: vi.fn().mockResolvedValue({ message_id: 100 }),
+        deleteMessage: vi.fn(),
+      });
+
+      const promise = handlers.statsUpdateHandler(ctx as CommandContext);
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(1000);
+      }
+      await promise;
+
+      expect(ctx.reply).toHaveBeenCalledWith("🔄 Пересчёт статистики: 0%");
+      expect(ctx.telegram.editMessageText).toHaveBeenCalledTimes(10);
+      expect(StatsService.recalcStats).toHaveBeenCalled();
+      expect(ctx.deleteMessage).toHaveBeenCalledWith(100);
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "✅ Статистика успешно пересчитана!",
+      );
+
+      vi.useRealTimers();
+    });
+
+    it("должен обработать ошибку", async () => {
+      vi.useFakeTimers();
+
+      const ctx = createMockContext({
+        message: { text: "/stats_update", message_id: 1 },
+        reply: vi.fn().mockResolvedValue({ message_id: 100 }),
+        telegram: {
+          editMessageText: vi
+            .fn()
+            .mockRejectedValue(new Error("Telegram error")),
+          deleteMessage: vi.fn(),
+        },
+      });
+
+      const promise = handlers.statsUpdateHandler(ctx as CommandContext);
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(1000);
+      }
+      await promise;
+
+      expect(logger.error).toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "❌ Ошибка при пересчёте.",
+      );
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe("helpHandler", () => {
+    it("должен отправить справку", async () => {
+      const ctx = createMockContext({
+        message: { text: "/help", message_id: 1 },
+      });
+
+      await handlers.helpHandler(ctx as CommandContext);
+
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalled();
+      const message = (middlewares.replyWithAutoDelete as any).mock.calls[0][1];
+      expect(message).toContain("Список доступных команд");
+      expect(message).toContain("/stats");
+      expect(message).toContain("/top");
+      expect(message).toContain("/help");
+    });
+  });
+
+  describe("textHandler", () => {
+    it("должен создать игру по тексту с упоминанием бота и командой game", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 111,
+          text: "@testbot game 16.02.2025\nВход:\n+500 | User",
+          entities: [{ type: "mention", offset: 0, length: 8 }],
+        },
+      });
+      (ParserService.extractGameDateFromText as any).mockReturnValue(
+        "2025-02-16",
+      );
+      (ParserService.parseTransactions as any).mockReturnValue([
+        { username: "User", amount: 500, type: "in" },
+      ]);
+      (GameService.createGame as any).mockReturnValue(42);
+      (GameService.addTransactions as any).mockReturnValue(1);
+
+      await handlers.textHandler(ctx as Context);
+
+      expect(ParserService.extractGameDateFromText).toHaveBeenCalled();
+      expect(ParserService.parseTransactions).toHaveBeenCalled();
+      expect(GameService.createGame).toHaveBeenCalledWith(
+        12345,
+        111,
+        "2025-02-16",
+      );
+      expect(GameService.addTransactions).toHaveBeenCalledWith(42, [
+        { username: "User", amount: 500, type: "in" },
+      ]);
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("✅ Игра от 2025-02-16 успешно создана"),
+      );
+    });
+
+    it("должен обработать обычный текст без упоминания (plain data)", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 222,
+          text: "Вход:\n+300 | Player\nВыход:\n+200 | Player2",
+          entities: [],
+        },
+      });
+      (ParserService.extractGameDateFromText as any).mockReturnValue(null);
+      (ParserService.parseTransactions as any).mockReturnValue([
+        { username: "Player", amount: 300, type: "in" },
+        { username: "Player2", amount: 200, type: "out" },
+      ]);
+      (GameService.createGame as any).mockReturnValue(99);
+      (GameService.addTransactions as any).mockReturnValue(2);
+
+      await handlers.textHandler(ctx as Context);
+
+      expect(GameService.createGame).toHaveBeenCalledWith(
+        12345,
+        222,
+        expect.any(String),
+      );
+      expect(GameService.addTransactions).toHaveBeenCalledWith(
+        99,
+        expect.any(Array),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("✅ Игра от"),
+      );
+    });
+
+    it("должен удалить игру, если транзакции не добавлены", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 333,
+          text: "Вход:\n+500 | User",
+          entities: [],
+        },
+      });
+      (ParserService.parseTransactions as any).mockReturnValue([
+        { username: "User", amount: 500, type: "in" },
+      ]);
+      (GameService.createGame as any).mockReturnValue(55);
+      (GameService.addTransactions as any).mockReturnValue(0);
+
+      await handlers.textHandler(ctx as Context);
+
+      expect(GameService.deleteGame).toHaveBeenCalledWith(12345, 333);
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "⚠️ Не удалось добавить транзакции. Игра удалена.",
+      );
+    });
+
+    it("должен ответить сообщением об отсутствии транзакций", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 444,
+          text: "Просто текст",
+          entities: [],
+        },
+      });
+      (ParserService.parseTransactions as any).mockReturnValue([]);
+
+      await handlers.textHandler(ctx as Context);
+
+      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("Не найдено ни одной корректной записи"),
+      );
+    });
+
+    it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 555,
+          text: "@testbot game 16.02.2025\nВход:\n+500 | User",
+          entities: [{ type: "mention", offset: 0, length: 8 }],
+        },
+      });
+      const testError = new Error("Test error");
+      (ParserService.extractGameDateFromText as any).mockImplementation(() => {
+        throw testError;
+      });
+
+      await handlers.textHandler(ctx as Context);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("[ERROR] textHandler"),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "❌ Произошла ошибка при обработке сообщения.",
+      );
+      expect(GameService.createGame).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("photoHandler", () => {
+    it("должен обработать фото с подписью, содержащей упоминание бота и game", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 555,
+          caption: "@testbot game 20.03.2026\nВход:\n+1000 | PhotoUser",
+          caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+        },
+      });
+      (ParserService.extractGameDateFromText as any).mockReturnValue(
+        "2026-03-20",
+      );
+      (ParserService.parseTransactions as any).mockReturnValue([
+        { username: "PhotoUser", amount: 1000, type: "in" },
+      ]);
+      (GameService.createGame as any).mockReturnValue(77);
+      (GameService.addTransactions as any).mockReturnValue(1);
+
+      await handlers.photoHandler(ctx as Context);
+
+      expect(GameService.createGame).toHaveBeenCalledWith(
+        12345,
+        555,
+        "2026-03-20",
+      );
+      expect(GameService.addTransactions).toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("✅ Игра от 2026-03-20 успешно создана"),
+      );
+    });
+
+    it("должен проигнорировать фото без упоминания бота", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 666,
+          caption: "Просто текст",
+          caption_entities: [],
+        },
+      });
+
+      await handlers.photoHandler(ctx as Context);
+
+      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
+      expect(GameService.createGame).not.toHaveBeenCalled();
+    });
+
+    it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 777,
+          caption: "@testbot game 20.03.2026\nВход:\n+1000 | PhotoUser",
+          caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+        },
+      });
+      const testError = new Error("Photo processing error");
+      (ParserService.extractGameDateFromText as any).mockImplementation(() => {
+        throw testError;
+      });
+
+      await handlers.photoHandler(ctx as Context);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("[ERROR] photoHandler"),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "❌ Произошла ошибка при обработке фотографии.",
+      );
+      expect(GameService.createGame).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("editedMessageHandler", () => {
+    it("должен обновить существующую игру", async () => {
+      const game = {
+        id: 10,
+        chat_id: 12345,
+        message_id: 777,
+        game_date: "2026-01-01",
+      };
+      (GameRepository.findByChatAndMessage as any).mockReturnValue(game);
+      const ctx = createMockContext({
+        editedMessage: {
+          chat: { id: 12345 },
+          message_id: 777,
+          text: "game 15.02.2026\nВход:\n+300 | Editor",
+        },
+      });
+      (ParserService.extractGameDateFromText as any).mockReturnValue(
+        "2026-02-15",
+      );
+      (ParserService.parseTransactions as any).mockReturnValue([
+        { username: "Editor", amount: 300, type: "in" },
+      ]);
+      (GameService.updateGame as any).mockReturnValue(1);
+
+      await handlers.editedMessageHandler(ctx as Context);
+
+      expect(GameService.updateGame).toHaveBeenCalledWith(10, "2026-02-15", [
+        { username: "Editor", amount: 300, type: "in" },
+      ]);
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("✏️ Игра от 2026-02-15 обновлена"),
+      );
+    });
+
+    it("должен создать новую игру, если игра не найдена", async () => {
+      (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
+      const ctx = createMockContext({
+        editedMessage: {
+          chat: { id: 12345 },
+          message_id: 888,
+          text: "Вход:\n+400 | NewUser",
+        },
+      });
+      (ParserService.parseTransactions as any).mockReturnValue([
+        { username: "NewUser", amount: 400, type: "in" },
+      ]);
+      (ParserService.extractGameDateFromText as any).mockReturnValue(null);
+      (GameService.createGame as any).mockReturnValue(11);
+      (GameService.addTransactions as any).mockReturnValue(1);
+
+      await handlers.editedMessageHandler(ctx as Context);
+
+      expect(GameService.createGame).toHaveBeenCalledWith(
+        12345,
+        888,
+        expect.any(String),
+      );
+      expect(GameService.addTransactions).toHaveBeenCalledWith(
+        11,
+        expect.any(Array),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        expect.stringContaining("✅ Игра от"),
+      );
+    });
+
+    it("должен проигнорировать редактирование без транзакций", async () => {
+      (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
+      const ctx = createMockContext({
+        editedMessage: {
+          chat: { id: 12345 },
+          message_id: 999,
+          text: "Обычное редактирование",
+        },
+      });
+      (ParserService.parseTransactions as any).mockReturnValue([]);
+
+      await handlers.editedMessageHandler(ctx as Context);
+
+      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
+    });
+
+    it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
+      const ctx = createMockContext({
+        editedMessage: {
+          chat: { id: 12345 },
+          message_id: 1000,
+          text: "game 15.02.2026\nВход:\n+300 | Editor",
+        },
+      });
+      const testError = new Error("Edit processing error");
+      (GameRepository.findByChatAndMessage as any).mockImplementation(() => {
+        throw testError;
+      });
+
+      await handlers.editedMessageHandler(ctx as Context);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("[ERROR] editedMessageHandler"),
+      );
+      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
+        ctx,
+        "❌ Произошла ошибка при обработке редактирования.",
+      );
+      expect(GameService.updateGame).not.toHaveBeenCalled();
+    });
+  });
+});
+
+```
+
+// backend/src/telegram/handlers/handlers.ts
 
 ```typescript
 import { Context } from "telegraf";
@@ -2002,9 +2735,15 @@ import { StatsService, GameService, ParserService } from "@/services";
 import { GameRepository } from "@/db/repositories";
 import { logger } from "@/config/logger";
 
-import { deleteCommandMessage, replyWithAutoDelete } from "./middlewares";
+import { deleteCommandMessage, replyWithAutoDelete } from "../middlewares";
 
 import type { CommandContext } from "@/types/telegram";
+
+function escapeMarkdown(text: string): string {
+  // Экранируем символы, имеющие специальное значение в Markdown
+  const specialChars = /[_*[\]()~`>#+\-=|{}.!]/g;
+  return text.replace(specialChars, "\\$&");
+}
 
 export const statsHandler = async (ctx: CommandContext) => {
   logger.info(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
@@ -2096,7 +2835,8 @@ export const topHandler = async (ctx: CommandContext) => {
       .slice(0, 10)
       .map((u, i) => {
         const sign = u.score >= 0 ? "+" : "";
-        return `${i + 1}. ${u.username} — ${sign}${u.score}`;
+        const escapedUsername = escapeMarkdown(u.username);
+        return `${i + 1}. ${escapedUsername} — ${sign}${u.score}`;
       })
       .join("\n");
 
@@ -2160,47 +2900,121 @@ export const helpHandler = async (ctx: CommandContext) => {
 
 // Текстовые сообщения – используем Context (проверяем наличие полей внутри)
 export const textHandler = async (ctx: Context) => {
-  const msg = ctx.message as any;
-  const text = msg.text || msg.caption;
-  if (!text) return;
+  try {
+    const msg = ctx.message as any;
+    const text = msg.text || msg.caption;
+    if (!text) return;
 
-  const botUsername = ctx.botInfo.username;
-  const entities = msg.entities || [];
-  let mentioned = false;
-  for (const entity of entities) {
-    if (entity.type === "mention") {
-      const mention = text.substring(
-        entity.offset,
-        entity.offset + entity.length,
-      );
-      if (mention === `@${botUsername}`) {
-        mentioned = true;
-        break;
+    const botUsername = ctx.botInfo.username;
+    const entities = msg.entities || [];
+    let mentioned = false;
+    for (const entity of entities) {
+      if (entity.type === "mention") {
+        const mention = text.substring(
+          entity.offset,
+          entity.offset + entity.length,
+        );
+        if (mention === `@${botUsername}`) {
+          mentioned = true;
+          break;
+        }
       }
     }
-  }
 
-  let isGameCommand = false;
-  let gameDate: string | undefined;
-  if (mentioned && text.includes("game")) {
-    isGameCommand = true;
-    gameDate =
+    let isGameCommand = false;
+    let gameDate: string | undefined;
+    if (mentioned && text.includes("game")) {
+      isGameCommand = true;
+      gameDate =
+        ParserService.extractGameDateFromText(text) ||
+        new Date().toISOString().slice(0, 10);
+    }
+
+    const isPlainData = !mentioned && !text.startsWith("/");
+
+    if (isGameCommand || isPlainData) {
+      if (isGameCommand) await deleteCommandMessage(ctx);
+
+      const lines = text
+        .split("\n")
+        .map((l: string) => l.trim())
+        .filter((l: string) => l !== "");
+      const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
+      const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
+
+      const transactions = ParserService.parseTransactions(dataLines);
+      if (transactions.length === 0) {
+        await replyWithAutoDelete(
+          ctx,
+          "⚠️ Не найдено ни одной корректной записи. Игра не создана.",
+        );
+        return;
+      }
+
+      const finalDate = gameDate || new Date().toISOString().slice(0, 10);
+      const gameId = GameService.createGame(
+        ctx.chat!.id,
+        ctx.message!.message_id,
+        finalDate,
+      );
+      const savedCount = GameService.addTransactions(gameId, transactions);
+
+      if (savedCount > 0) {
+        await replyWithAutoDelete(
+          ctx,
+          `✅ Игра от ${finalDate} успешно создана. Добавлено записей: ${savedCount}`,
+        );
+      } else {
+        GameService.deleteGame(ctx.chat!.id, ctx.message!.message_id);
+        await replyWithAutoDelete(
+          ctx,
+          "⚠️ Не удалось добавить транзакции. Игра удалена.",
+        );
+      }
+    }
+  } catch (error) {
+    logger.error(`[ERROR] textHandler: ${JSON.stringify(error, null, 2)}`);
+    await replyWithAutoDelete(
+      ctx,
+      "❌ Произошла ошибка при обработке сообщения.",
+    );
+  }
+};
+
+// Фото – используем Context
+export const photoHandler = async (ctx: Context) => {
+  try {
+    const caption = (ctx.message as any)?.caption;
+    if (!caption) return;
+
+    const text = caption;
+    const botUsername = ctx.botInfo.username;
+    const entities = (ctx.message as any).caption_entities || [];
+    let mentioned = false;
+    for (const entity of entities) {
+      if (entity.type === "mention") {
+        const mention = text.substring(
+          entity.offset,
+          entity.offset + entity.length,
+        );
+        if (mention === `@${botUsername}`) {
+          mentioned = true;
+          break;
+        }
+      }
+    }
+
+    if (!mentioned || !text.includes("game")) return;
+
+    const gameDate =
       ParserService.extractGameDateFromText(text) ||
       new Date().toISOString().slice(0, 10);
-  }
-
-  const isPlainData = !mentioned && !text.startsWith("/");
-
-  if (isGameCommand || isPlainData) {
-    if (isGameCommand) await deleteCommandMessage(ctx);
-
     const lines = text
       .split("\n")
       .map((l: string) => l.trim())
       .filter((l: string) => l !== "");
     const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
     const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
-
     const transactions = ParserService.parseTransactions(dataLines);
     if (transactions.length === 0) {
       await replyWithAutoDelete(
@@ -2210,97 +3024,55 @@ export const textHandler = async (ctx: Context) => {
       return;
     }
 
-    const finalDate = gameDate || new Date().toISOString().slice(0, 10);
     const gameId = GameService.createGame(
       ctx.chat!.id,
       ctx.message!.message_id,
-      finalDate,
+      gameDate,
     );
     const savedCount = GameService.addTransactions(gameId, transactions);
-
-    if (savedCount > 0) {
-      await replyWithAutoDelete(
-        ctx,
-        `✅ Игра от ${finalDate} успешно создана. Добавлено записей: ${savedCount}`,
-      );
-    } else {
-      GameService.deleteGame(ctx.chat!.id, ctx.message!.message_id);
-      await replyWithAutoDelete(
-        ctx,
-        "⚠️ Не удалось добавить транзакции. Игра удалена.",
-      );
-    }
-  }
-};
-
-// Фото – используем Context
-export const photoHandler = async (ctx: Context) => {
-  const caption = (ctx.message as any)?.caption;
-  if (!caption) return;
-
-  const text = caption;
-  const botUsername = ctx.botInfo.username;
-  const entities = (ctx.message as any).caption_entities || [];
-  let mentioned = false;
-  for (const entity of entities) {
-    if (entity.type === "mention") {
-      const mention = text.substring(
-        entity.offset,
-        entity.offset + entity.length,
-      );
-      if (mention === `@${botUsername}`) {
-        mentioned = true;
-        break;
-      }
-    }
-  }
-
-  if (!mentioned || !text.includes("game")) return;
-
-  const gameDate =
-    ParserService.extractGameDateFromText(text) ||
-    new Date().toISOString().slice(0, 10);
-  const lines = text
-    .split("\n")
-    .map((l: string) => l.trim())
-    .filter((l: string) => l !== "");
-  const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
-  const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
-  const transactions = ParserService.parseTransactions(dataLines);
-  if (transactions.length === 0) {
     await replyWithAutoDelete(
       ctx,
-      "⚠️ Не найдено ни одной корректной записи. Игра не создана.",
+      `✅ Игра от ${gameDate} успешно создана. Добавлено записей: ${savedCount}`,
     );
-    return;
+  } catch (error) {
+    logger.error(`[ERROR] photoHandler: ${JSON.stringify(error, null, 2)}`);
+    await replyWithAutoDelete(
+      ctx,
+      "❌ Произошла ошибка при обработке фотографии.",
+    );
   }
-
-  const gameId = GameService.createGame(
-    ctx.chat!.id,
-    ctx.message!.message_id,
-    gameDate,
-  );
-  const savedCount = GameService.addTransactions(gameId, transactions);
-  await replyWithAutoDelete(
-    ctx,
-    `✅ Игра от ${gameDate} успешно создана. Добавлено записей: ${savedCount}`,
-  );
 };
 
 // Редактирование – используем Context
 export const editedMessageHandler = async (ctx: Context) => {
-  const editedMessage = ctx.editedMessage as any;
-  if (!editedMessage) return;
+  try {
+    const editedMessage = ctx.editedMessage as any;
+    if (!editedMessage) return;
 
-  const chatId = editedMessage.chat.id;
-  const messageId = editedMessage.message_id;
-  const text = editedMessage.text || editedMessage.caption || "";
+    const chatId = editedMessage.chat.id;
+    const messageId = editedMessage.message_id;
+    const text = editedMessage.text || editedMessage.caption || "";
 
-  let game = GameRepository.findByChatAndMessage(chatId, messageId);
-  if (game) {
-    const newDate =
-      ParserService.extractGameDateFromText(text) ||
-      new Date().toISOString().slice(0, 10);
+    let game = GameRepository.findByChatAndMessage(chatId, messageId);
+    if (game) {
+      const newDate =
+        ParserService.extractGameDateFromText(text) ||
+        new Date().toISOString().slice(0, 10);
+      const lines = text
+        .split("\n")
+        .map((l: string) => l.trim())
+        .filter((l: string) => l !== "");
+      const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
+      const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
+      const transactions = ParserService.parseTransactions(dataLines);
+      const savedCount = GameService.updateGame(game.id, newDate, transactions);
+      await replyWithAutoDelete(
+        ctx,
+        `✏️ Игра от ${newDate} обновлена. Добавлено записей: ${savedCount}`,
+      );
+      return;
+    }
+
     const lines = text
       .split("\n")
       .map((l: string) => l.trim())
@@ -2308,33 +3080,34 @@ export const editedMessageHandler = async (ctx: Context) => {
     const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
     const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
     const transactions = ParserService.parseTransactions(dataLines);
-    const savedCount = GameService.updateGame(game.id, newDate, transactions);
+    if (transactions.length === 0) return;
+
+    const gameDate =
+      ParserService.extractGameDateFromText(text) ||
+      new Date().toISOString().slice(0, 10);
+    const newGameId = GameService.createGame(chatId, messageId, gameDate);
+    const savedCount = GameService.addTransactions(newGameId, transactions);
     await replyWithAutoDelete(
       ctx,
-      `✏️ Игра от ${newDate} обновлена. Добавлено записей: ${savedCount}`,
+      `✅ Игра от ${gameDate} успешно создана. Добавлено записей: ${savedCount}`,
     );
-    return;
+  } catch (error) {
+    logger.error(
+      `[ERROR] editedMessageHandler: ${JSON.stringify(error, null, 2)}`,
+    );
+    await replyWithAutoDelete(
+      ctx,
+      "❌ Произошла ошибка при обработке редактирования.",
+    );
   }
-
-  const lines = text
-    .split("\n")
-    .map((l: string) => l.trim())
-    .filter((l: string) => l !== "");
-  const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
-  const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
-  const transactions = ParserService.parseTransactions(dataLines);
-  if (transactions.length === 0) return;
-
-  const gameDate =
-    ParserService.extractGameDateFromText(text) ||
-    new Date().toISOString().slice(0, 10);
-  const newGameId = GameService.createGame(chatId, messageId, gameDate);
-  const savedCount = GameService.addTransactions(newGameId, transactions);
-  await replyWithAutoDelete(
-    ctx,
-    `✅ Игра от ${gameDate} успешно создана. Добавлено записей: ${savedCount}`,
-  );
 };
+
+```
+
+// backend/src/telegram/handlers/index.ts
+
+```typescript
+export * from "./handlers";
 
 ```
 

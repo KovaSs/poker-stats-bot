@@ -1,7 +1,9 @@
 import { Telegraf } from "telegraf";
+import https from "https";
 
 import { logger } from "@/config/logger";
 
+import { registerCallbacks } from "./callbacks";
 import { errorHandler } from "./middlewares";
 import * as handlers from "./handlers";
 
@@ -33,6 +35,9 @@ export function setupBot(token: string, apiRoot?: string) {
   bot.on("text", handlers.textHandler);
   bot.on("photo", handlers.photoHandler);
   bot.on("edited_message", handlers.editedMessageHandler);
+
+  // Регистрируем все callback-обработчики
+  registerCallbacks(bot);
 
   return bot;
 }

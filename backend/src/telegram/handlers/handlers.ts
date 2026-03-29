@@ -9,32 +9,15 @@ import { deleteCommandMessage, replyWithAutoDelete } from "../middlewares";
 import type { CommandContext } from "@/types/telegram";
 
 function escapeMarkdown(text: string): string {
-  // Экранируем символы, имеющие специальное значение в Markdown
   const specialChars = /[_*[\]()~`>#+\-=|{}.!]/g;
   return text.replace(specialChars, "\\$&");
 }
 
-export const statsHandler = async (ctx: CommandContext) => {
-  logger.info(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
-  await deleteCommandMessage(ctx);
-
+// --------------------------------------------------------------------------
+// Публичная функция для отправки статистики (используется и в команде, и в callback)
+// --------------------------------------------------------------------------
+export async function sendStats(ctx: Context, chatId: number, filter?: string) {
   try {
-    const args = ctx.message.text.split(" ").slice(1);
-    let filter: string | undefined = undefined;
-    if (args.length > 0) {
-      const arg = args[0].toLowerCase();
-      if (arg === "all" || /^\d{4}$/.test(arg)) {
-        filter = arg;
-      } else {
-        await replyWithAutoDelete(
-          ctx,
-          "❌ Неверный формат. Используйте `/stats all`, `/stats 2024` или просто `/stats` для последнего года.",
-        );
-        return;
-      }
-    }
-
-    const chatId = ctx.chat!.id;
     const stats = StatsService.getFilteredStats(chatId, filter);
     if (stats.length === 0) {
       await replyWithAutoDelete(ctx, "📊 Пока нет данных за указанный период.");
@@ -62,9 +45,51 @@ export const statsHandler = async (ctx: CommandContext) => {
     message += "```";
     await replyWithAutoDelete(ctx, message, { parse_mode: "Markdown" });
   } catch (error) {
-    logger.error(`[ERROR] /stats: ${JSON.stringify(error, null, 2)}`);
+    logger.error(`[ERROR] sendStats: ${JSON.stringify(error, null, 2)}`);
     await replyWithAutoDelete(ctx, "❌ Ошибка при загрузке статистики.");
   }
+}
+
+export const statsHandler = async (ctx: CommandContext) => {
+  logger.info(`[HANDLER] /stats вызван пользователем ${ctx.from?.id}`);
+  await deleteCommandMessage(ctx);
+
+  const args = ctx.message.text.split(" ").slice(1);
+  const chatId = ctx.chat!.id;
+
+  // Если есть аргументы – обрабатываем как раньше
+  if (args.length > 0) {
+    const arg = args[0].toLowerCase();
+    if (arg === "all" || /^\d{4}$/.test(arg)) {
+      await sendStats(ctx, chatId, arg);
+    } else {
+      await replyWithAutoDelete(
+        ctx,
+        "❌ Неверный формат. Используйте `/stats all`, `/stats 2024` или просто `/stats` для выбора фильтра.",
+      );
+    }
+    return;
+  }
+
+  // Нет аргументов – показываем клавиатуру
+  const keyboard = {
+    inline_keyboard: [
+      [
+        { text: "📅 Всё время", callback_data: "stats_all" },
+        { text: "📆 Последний год", callback_data: "stats_last_year" },
+      ],
+      [
+        { text: "2024", callback_data: "stats_2024" },
+        { text: "2025", callback_data: "stats_2025" },
+        { text: "2026", callback_data: "stats_2026" },
+      ],
+    ],
+  };
+
+  await ctx.reply("📊 Выберите период для статистики:", {
+    reply_markup: keyboard,
+    parse_mode: "Markdown",
+  });
 };
 
 export const topHandler = async (ctx: CommandContext) => {
@@ -148,8 +173,8 @@ export const helpHandler = async (ctx: CommandContext) => {
 
   const helpMessage = [
     "📚 **Список доступных команд:**",
-    "/stats — Показать детальную статистику всех участников (входы, выходы, разница)",
-    "/top — Топ-10 участников по разнице (выход минус вход)",
+    "/stats — Показать меню выбора периода, затем детальную статистику",
+    "/top — Топ‑10 участников по разнице (выход минус вход)",
     "/help — Показать это сообщение",
     "ℹ️ **Как добавлять данные:**",
     "Сообщения должны содержать строки вида:",
@@ -167,7 +192,11 @@ export const helpHandler = async (ctx: CommandContext) => {
   await replyWithAutoDelete(ctx, helpMessage, { parse_mode: "Markdown" });
 };
 
-// Текстовые сообщения – используем Context (проверяем наличие полей внутри)
+// --------------------------------------------------------------------------
+// Остальные обработчики (textHandler, photoHandler, editedMessageHandler)
+// остаются без изменений, но для полноты они приведены ниже.
+// --------------------------------------------------------------------------
+
 export const textHandler = async (ctx: Context) => {
   try {
     const msg = ctx.message as any;
@@ -250,7 +279,6 @@ export const textHandler = async (ctx: Context) => {
   }
 };
 
-// Фото – используем Context
 export const photoHandler = async (ctx: Context) => {
   try {
     const caption = (ctx.message as any)?.caption;
@@ -312,7 +340,6 @@ export const photoHandler = async (ctx: Context) => {
   }
 };
 
-// Редактирование – используем Context
 export const editedMessageHandler = async (ctx: Context) => {
   try {
     const editedMessage = ctx.editedMessage as any;
