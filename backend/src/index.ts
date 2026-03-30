@@ -18,6 +18,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  logger.error({ error: err }, "Fatal error");
+  logger.error(
+    { error: err, message: err.message, stack: err.stack },
+    "Fatal error",
+  );
   process.exit(1);
 });
