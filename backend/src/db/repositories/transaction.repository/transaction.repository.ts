@@ -42,8 +42,8 @@ export const TransactionRepository = {
   }[] {
     const stmt = getDB().prepare(`
       SELECT username, game_id,
-             SUM(CASE WHEN type = 'in' THEN amount ELSE 0 END) as total_in,
-             SUM(CASE WHEN type = 'out' THEN amount ELSE 0 END) as total_out
+            SUM(CASE WHEN type = 'in' THEN amount ELSE 0 END) as total_in,
+            SUM(CASE WHEN type = 'out' THEN amount ELSE 0 END) as total_out
       FROM transactions
       GROUP BY username, game_id
     `);
@@ -116,5 +116,15 @@ export const TransactionRepository = {
     const rows = stmt.all(...params) as any[];
     logger.info(`[DB] getFilteredScores: получено ${rows.length} записей`);
     return rows;
+  },
+  getDistinctYears(chatId: number): string[] {
+    const stmt = getDB().prepare(`
+      SELECT DISTINCT strftime('%Y', game_date) as year
+      FROM games
+      WHERE chat_id = ? AND game_date IS NOT NULL
+      ORDER BY year DESC
+    `);
+    const rows = stmt.all(chatId) as { year: string }[];
+    return rows.map((row) => row.year);
   },
 };

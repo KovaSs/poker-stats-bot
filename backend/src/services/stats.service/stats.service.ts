@@ -83,4 +83,8 @@ export const StatsService = {
       `[StatsService] Пересчёт завершён, обработано пользователей: ${usersToInsert.length}`,
     );
   },
+
+  getAvailableYears(chatId: number): string[] {
+    return TransactionRepository.getDistinctYears(chatId);
+  },
 };
