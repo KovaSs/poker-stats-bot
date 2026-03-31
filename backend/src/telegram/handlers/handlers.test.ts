@@ -1,10 +1,14 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Context } from "telegraf";
+
 import { StatsService, GameService, ParserService } from "@/services";
 import { GameRepository } from "@/db/repositories";
-import * as handlers from "./handlers";
-import * as middlewares from "../middlewares";
 import { logger } from "@/config/logger";
+
+import * as middlewares from "../middlewares";
+
+import * as handlers from "./handlers";
+
 import type { CommandContext } from "@/types/telegram";
 
 vi.mock("@/services", () => ({
@@ -14,14 +18,14 @@ vi.mock("@/services", () => ({
     recalcStats: vi.fn(),
   },
   GameService: {
-    createGame: vi.fn(),
     addTransactions: vi.fn(),
+    createGame: vi.fn(),
     updateGame: vi.fn(),
     deleteGame: vi.fn(),
   },
   ParserService: {
-    parseTransactions: vi.fn(),
     extractGameDateFromText: vi.fn(),
+    parseTransactions: vi.fn(),
   },
 }));
 
@@ -38,24 +42,24 @@ vi.mock("../middlewares", () => ({
 
 vi.mock("@/config/logger", () => ({
   logger: {
-    info: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
     warn: vi.fn(),
   },
 }));
 
 function createMockContext(overrides: Partial<any> = {}): any {
   return {
-    chat: { id: 12345 },
     from: { id: 67890, username: "testuser" },
+    botInfo: { username: "testbot" },
+    chat: { id: 12345 },
     message: {
       message_id: 999,
-      text: "",
       entities: [],
+      text: "",
     },
-    botInfo: { username: "testbot" },
-    reply: vi.fn(),
     deleteMessage: vi.fn(),
+    reply: vi.fn(),
     telegram: {
       editMessageText: vi.fn(),
       deleteMessage: vi.fn(),
@@ -75,25 +79,24 @@ describe("handlers", () => {
   });
 
   describe("statsHandler", () => {
-    it("должен показать статистику за последний год по умолчанию", async () => {
+    // ИЗМЕНЕНО: теперь проверяем клавиатуру, а не вызов статистики
+    it("должен показать клавиатуру выбора периода, если нет аргументов", async () => {
       const ctx = createMockContext({
         message: { text: "/stats", message_id: 1 },
       });
-      const mockStats = [
-        { username: "user1", total_in: 100, total_out: 200, games_count: 1 },
-      ];
-      (StatsService.getFilteredStats as any).mockReturnValue(mockStats);
 
       await handlers.statsHandler(ctx as CommandContext);
 
-      expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
-        12345,
-        undefined,
-      );
-      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
-        ctx,
-        expect.stringContaining("последний год"),
-        { parse_mode: "Markdown" },
+      // Статистика не запрашивается
+      expect(StatsService.getFilteredStats).not.toHaveBeenCalled();
+      // Проверяем, что отправилась клавиатура
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining("Выберите период"),
+        expect.objectContaining({
+          reply_markup: expect.objectContaining({
+            inline_keyboard: expect.any(Array),
+          }),
+        }),
       );
     });
 
@@ -132,9 +135,10 @@ describe("handlers", () => {
       );
     });
 
+    // ИЗМЕНЕНО: теперь передаём аргумент, чтобы вызвать sendStats
     it("должен сообщить об отсутствии данных", async () => {
       const ctx = createMockContext({
-        message: { text: "/stats", message_id: 1 },
+        message: { text: "/stats all", message_id: 1 },
       });
       (StatsService.getFilteredStats as any).mockReturnValue([]);
 
@@ -196,8 +200,8 @@ describe("handlers", () => {
       vi.useFakeTimers();
 
       const ctx = createMockContext({
-        message: { text: "/stats_update", message_id: 1 },
         reply: vi.fn().mockResolvedValue({ message_id: 100 }),
+        message: { text: "/stats_update", message_id: 1 },
         deleteMessage: vi.fn(),
       });
 
@@ -438,9 +442,9 @@ describe("handlers", () => {
     it("должен проигнорировать фото без упоминания бота", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 666,
           caption: "Просто текст",
           caption_entities: [],
+          message_id: 666,
         },
       });
 
@@ -453,9 +457,9 @@ describe("handlers", () => {
     it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 777,
           caption: "@testbot game 20.03.2026\nВход:\n+1000 | PhotoUser",
           caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+          message_id: 777,
         },
       });
       const testError = new Error("Photo processing error");
@@ -479,17 +483,17 @@ describe("handlers", () => {
   describe("editedMessageHandler", () => {
     it("должен обновить существующую игру", async () => {
       const game = {
-        id: 10,
-        chat_id: 12345,
-        message_id: 777,
         game_date: "2026-01-01",
+        message_id: 777,
+        chat_id: 12345,
+        id: 10,
       };
       (GameRepository.findByChatAndMessage as any).mockReturnValue(game);
       const ctx = createMockContext({
         editedMessage: {
+          text: "game 15.02.2026\nВход:\n+300 | Editor",
           chat: { id: 12345 },
           message_id: 777,
-          text: "game 15.02.2026\nВход:\n+300 | Editor",
         },
       });
       (ParserService.extractGameDateFromText as any).mockReturnValue(
@@ -515,9 +519,9 @@ describe("handlers", () => {
       (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
       const ctx = createMockContext({
         editedMessage: {
+          text: "Вход:\n+400 | NewUser",
           chat: { id: 12345 },
           message_id: 888,
-          text: "Вход:\n+400 | NewUser",
         },
       });
       (ParserService.parseTransactions as any).mockReturnValue([
@@ -548,9 +552,9 @@ describe("handlers", () => {
       (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
       const ctx = createMockContext({
         editedMessage: {
+          text: "Обычное редактирование",
           chat: { id: 12345 },
           message_id: 999,
-          text: "Обычное редактирование",
         },
       });
       (ParserService.parseTransactions as any).mockReturnValue([]);
@@ -564,9 +568,9 @@ describe("handlers", () => {
     it("должен обработать ошибку и отправить сообщение об ошибке", async () => {
       const ctx = createMockContext({
         editedMessage: {
+          text: "game 15.02.2026\nВход:\n+300 | Editor",
           chat: { id: 12345 },
           message_id: 1000,
-          text: "game 15.02.2026\nВход:\n+300 | Editor",
         },
       });
       const testError = new Error("Edit processing error");

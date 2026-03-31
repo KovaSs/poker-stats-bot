@@ -1,6 +1,6 @@
 # Анализ структуры проекта
 
-**Дата генерации:** 3/29/2026, 7:16:59 PM
+**Дата генерации:** 3/31/2026, 9:15:43 PM
 **Обработано файлов:** 60
 **Всего элементов (с учётом папок):** 83
 
@@ -162,11 +162,11 @@
 ```json
 {
   "name": "telegram-stats-bot-backend",
-  "version": "2.0.1",
+  "version": "0.1.0",
   "scripts": {
     "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
-    "start": "node -r tsconfig-paths/register dist/index.js",
-    "build": "tsc && tsc-alias",
+    "start": "node dist/index.js",
+    "build": "tsc",
     "test:unit": "vitest",
     "test:coverage": "vitest --coverage",
     "test:watch": "vitest --watch"
@@ -190,7 +190,6 @@
     "supertest": "^7.2.2",
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
-    "tsc-alias": "^1.8.16",
     "typescript": "^5.0.4",
     "vitest": "^3.1.1"
   }
@@ -372,15 +371,21 @@ export const logger = pino({
 ```typescript
 import Database from "better-sqlite3";
 import path from "path";
+import fs from "fs";
 
 import { logger } from "@/config/logger";
-
 import { runMigrations } from "./migrator";
 
 let db: Database.Database;
 
 export function initDB(): Database.Database {
-  const dbPath = path.join(__dirname, "../../../data/stats.db");
+  // Используем абсолютный путь внутри контейнера
+  const dbPath = path.join("/app", "data", "stats.db");
+  const dir = path.dirname(dbPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    logger.info(`[DB] Создана директория: ${dir}`);
+  }
   db = new Database(dbPath);
   logger.info("[DB] База данных инициализирована");
 
@@ -1435,7 +1440,10 @@ async function main() {
 }
 
 main().catch((err) => {
-  logger.error({ error: err }, "Fatal error");
+  logger.error(
+    { error: err, message: err.message, stack: err.stack },
+    "Fatal error",
+  );
   process.exit(1);
 });
 
@@ -3363,10 +3371,10 @@ services:
 
 ```
 
-// Dockerfile (base64, size: 1031, mtime: 2026-03-27T08:49:49.407Z, md5: 1e1d4b89b1d321bb373ef02e6eb86797)
+// Dockerfile (base64, size: 1334, mtime: 2026-03-30T04:36:03.980Z, md5: 6bf36afb87d34a6831ee7566a3dae1ab)
 
 ```
-IyDQrdGC0LDQvyDRgdCx0L7RgNC60Lgg0LHRjdC60LXQvdC00LAgKNC60L7QvNC/0LjQu9GP0YbQuNGPIFR5cGVTY3JpcHQpCkZST00gbm9kZToxOCBBUyBiYWNrZW5kLWJ1aWxkZXIKV09SS0RJUiAvYXBwL2JhY2tlbmQKQ09QWSBiYWNrZW5kL3BhY2thZ2UqLmpzb24gLi8KQ09QWSBiYWNrZW5kLyAuLwpSVU4gbnBtIGNpClJVTiBucG0gcnVuIGJ1aWxkCgojINCk0LjQvdCw0LvRjNC90YvQuSDQvtCx0YDQsNC3CkZST00gbm9kZToxOC1zbGltCldPUktESVIgL2FwcAoKIyDQo9GB0YLQsNC90LDQstC70LjQstCw0LXQvCDQuNC90YHRgtGA0YPQvNC10L3RgtGLINGB0LHQvtGA0LrQuCDQtNC70Y8g0LrQvtC80L/QuNC70Y/RhtC40Lgg0L3QsNGC0LjQstC90YvRhSDQvNC+0LTRg9C70LXQuQpSVU4gYXB0LWdldCB1cGRhdGUgJiYgYXB0LWdldCBpbnN0YWxsIC15IHB5dGhvbjMgbWFrZSBnKysgJiYgcm0gLXJmIC92YXIvbGliL2FwdC9saXN0cy8qCgojINCa0L7Qv9C40YDRg9C10Lwg0YLQvtC70YzQutC+INC90LXQvtCx0YXQvtC00LjQvNGL0LUg0YTQsNC50LvRiyDQuNC3IGJ1aWxkZXIt0YHRgtCw0LTQuNC5CkNPUFkgLS1mcm9tPWJhY2tlbmQtYnVpbGRlciAvYXBwL2JhY2tlbmQvZGlzdCAuL2Rpc3QKQ09QWSAtLWZyb209YmFja2VuZC1idWlsZGVyIC9hcHAvYmFja2VuZC9wYWNrYWdlLmpzb24gLi8KCiMg0KPRgdGC0LDQvdCw0LLQu9C40LLQsNC10Lwg0LfQsNCy0LjRgdC40LzQvtGB0YLQuCDQuCDQv9GA0LjQvdGD0LTQuNGC0LXQu9GM0L3QviDQv9C10YDQtdGB0L7QsdC40YDQsNC10Lwgc3FsaXRlMyDQv9C+0LQg0LDRgNGF0LjRgtC10LrRgtGD0YDRgyDQutC+0L3RgtC10LnQvdC10YDQsApSVU4gbnBtIGluc3RhbGwgLS1wcm9kdWN0aW9uICYmIG5wbSByZWJ1aWxkIHNxbGl0ZTMgLS1idWlsZC1mcm9tLXNvdXJjZQoKIyDQn9Cw0L/QutCwINC00LvRjyDQsdCw0LfRiyDQtNCw0L3QvdGL0YUKVk9MVU1FIFsgIi9hcHAvZGF0YSIgXQoKRVhQT1NFIDMwMDAKQ01EIFsibm9kZSIsICJkaXN0L2luZGV4LmpzIl0=
+IyAtLS0tINCt0YLQsNC/INGB0LHQvtGA0LrQuCAo0LrQvtC80L/QuNC70Y/RhtC40Y8gVHlwZVNjcmlwdCkgLS0tLQpGUk9NIG5vZGU6MTggQVMgYmFja2VuZC1idWlsZGVyCldPUktESVIgL2FwcC9iYWNrZW5kCkNPUFkgYmFja2VuZC9wYWNrYWdlKi5qc29uIC4vClJVTiBucG0gY2kKQ09QWSBiYWNrZW5kLyAuLwpSVU4gbnBtIHJ1biBidWlsZAoKIyAtLS0tINCt0YLQsNC/INC00LvRjyBwcm9kdWN0aW9u4oCR0LfQsNCy0LjRgdC40LzQvtGB0YLQtdC5ICjQsdC10LcgZGV2KSAtLS0tCkZST00gbm9kZToxOCBBUyBiYWNrZW5kLWRlcHMKV09SS0RJUiAvYXBwL2JhY2tlbmQKQ09QWSBiYWNrZW5kL3BhY2thZ2UqLmpzb24gLi8KUlVOIG5wbSBjaSAtLW9taXQ9ZGV2CgojIC0tLS0g0KTQuNC90LDQu9GM0L3Ri9C5INC+0LHRgNCw0LcgLS0tLQpGUk9NIG5vZGU6MTgtc2xpbQpXT1JLRElSIC9hcHAKCiMg0KHQuNGB0YLQtdC80L3Ri9C1INC30LDQstC40YHQuNC80L7RgdGC0Lgg0LTQu9GPINGB0LHQvtGA0LrQuCDQvdCw0YLQuNCy0L3Ri9GFINC80L7QtNGD0LvQtdC5IChzcWxpdGUzKQpSVU4gYXB0LWdldCB1cGRhdGUgJiYgYXB0LWdldCBpbnN0YWxsIC15IHB5dGhvbjMgbWFrZSBnKysgJiYgcm0gLXJmIC92YXIvbGliL2FwdC9saXN0cy8qCgojINCa0L7Qv9C40YDRg9C10LwgcHJvZHVjdGlvbuKAkdC30LDQstC40YHQuNC80L7RgdGC0LgKQ09QWSAtLWZyb209YmFja2VuZC1kZXBzIC9hcHAvYmFja2VuZC9ub2RlX21vZHVsZXMgLi9ub2RlX21vZHVsZXMKIyDQmtC+0L/QuNGA0YPQtdC8INGB0LrQvtC80L/QuNC70LjRgNC+0LLQsNC90L3Ri9C1INGE0LDQudC70YsKQ09QWSAtLWZyb209YmFja2VuZC1idWlsZGVyIC9hcHAvYmFja2VuZC9kaXN0IC4vZGlzdAojINCa0L7Qv9C40YDRg9C10LwgcGFja2FnZS5qc29uICjQvdC10L7QsdGP0LfQsNGC0LXQu9GM0L3QvikKQ09QWSAtLWZyb209YmFja2VuZC1idWlsZGVyIC9hcHAvYmFja2VuZC9wYWNrYWdlLmpzb24gLi8KCiMg0KHQvtC30LTQsNGR0LwgdHNjb25maWcuanNvbiDQtNC70Y8g0YDQsNC30YDQtdGI0LXQvdC40Y8g0LDQu9C40LDRgdC+0LIgQC8qClJVTiBlY2hvICd7ICJjb21waWxlck9wdGlvbnMiOiB7ICJiYXNlVXJsIjogIi4iLCAicGF0aHMiOiB7ICJALyoiOiBbImRpc3QvKiJdIH0gfSB9JyA+IC9hcHAvdHNjb25maWcuanNvbgoKIyDQn9Cw0L/QutCwINC00LvRjyDQsdCw0LfRiyDQtNCw0L3QvdGL0YUKVk9MVU1FIFsgIi9hcHAvZGF0YSIgXQoKRVhQT1NFIDMwMDAKCkNNRCBbICJub2RlIiwgIi1yIiwgInRzY29uZmlnLXBhdGhzL3JlZ2lzdGVyIiwgImRpc3QvaW5kZXguanMiIF0=
 ```
 
 // frontend/eslint.config.js
