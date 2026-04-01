@@ -8,11 +8,17 @@ import { runMigrations } from "./migrator";
 let db: Database.Database;
 
 function getDatabasePath(): string {
+  // Если путь явно передан через окружение – используем его
+  if (process.env.DB_PATH) {
+    return process.env.DB_PATH;
+  }
+
+  // В production (Docker) используем /app/data/stats.db
   if (process.env.NODE_ENV === "production") {
-    // В Docker-контейнере база данных находится в /app/data
     return path.join("/app", "data", "stats.db");
   }
-  // В режиме разработки используем корневую папку data, расположенную на уровень выше папки backend
+
+  // В разработке – папка data на уровень выше backend
   return path.join(process.cwd(), "..", "data", "stats.db");
 }
 
@@ -26,7 +32,9 @@ export function initDB(): Database.Database {
   db = new Database(dbPath);
   logger.info(`[DB] База данных инициализирована: ${dbPath}`);
 
+  // Применяем миграции (они безопасны, так как проверяют существование таблиц)
   runMigrations(db);
+
   return db;
 }
 
