@@ -105,70 +105,50 @@ describe("game handlers", () => {
       );
     });
 
-    it("обрабатывает обычный текст без упоминания (plain data)", async () => {
+    it("игнорирует обычный текст без упоминания бота", async () => {
       const ctx = createMockContext({
         message: {
           message_id: 222,
-          text: "Вход:\n+300 | Player\nВыход:\n+200 | Player2",
+          text: "Вход:\n+300 | Player",
           entities: [],
         },
       });
-      (ParserService.extractGameDateFromText as any).mockReturnValue(null);
-      (ParserService.parseTransactions as any).mockReturnValue([
-        { username: "Player", amount: 300, type: "in" },
-        { username: "Player2", amount: 200, type: "out" },
-      ]);
-      (GameService.createGame as any).mockReturnValue(99);
-      (GameService.addTransactions as any).mockReturnValue(2);
 
       await game.textHandler(ctx as Context);
 
-      expect(GameService.createGame).toHaveBeenCalledWith(
-        12345,
-        222,
-        expect.any(String),
-      );
-      expect(GameService.addTransactions).toHaveBeenCalledWith(
-        99,
-        expect.any(Array),
-      );
-      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
-        ctx,
-        expect.stringContaining("✅ Игра от"),
-      );
+      // Проверяем, что никакие сервисы не вызывались и ответ не отправлялся
+      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
+      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
     });
 
-    it("удаляет игру, если транзакции не добавлены", async () => {
+    it("игнорирует сообщение с упоминанием, но без слова game", async () => {
       const ctx = createMockContext({
         message: {
           message_id: 333,
-          text: "Вход:\n+500 | User",
-          entities: [],
+          text: "@testbot привет",
+          entities: [{ type: "mention", offset: 0, length: 8 }],
         },
       });
-      (ParserService.parseTransactions as any).mockReturnValue([
-        { username: "User", amount: 500, type: "in" },
-      ]);
-      (GameService.createGame as any).mockReturnValue(55);
-      (GameService.addTransactions as any).mockReturnValue(0);
 
       await game.textHandler(ctx as Context);
 
-      expect(GameService.deleteGame).toHaveBeenCalledWith(12345, 333);
-      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
-        ctx,
-        "⚠️ Не удалось добавить транзакции. Игра удалена.",
-      );
+      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
+      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
     });
 
-    it("отвечает сообщением об отсутствии транзакций", async () => {
+    it("отвечает сообщением об отсутствии транзакций при упоминании и game", async () => {
       const ctx = createMockContext({
         message: {
           message_id: 444,
-          text: "Просто текст",
-          entities: [],
+          text: "@testbot game 16.02.2025\nПросто текст",
+          entities: [{ type: "mention", offset: 0, length: 8 }],
         },
       });
+      (ParserService.extractGameDateFromText as any).mockReturnValue(
+        "2025-02-16",
+      );
       (ParserService.parseTransactions as any).mockReturnValue([]);
 
       await game.textHandler(ctx as Context);
@@ -253,6 +233,21 @@ describe("game handlers", () => {
       expect(GameService.createGame).not.toHaveBeenCalled();
     });
 
+    it("игнорирует фото с упоминанием, но без game", async () => {
+      const ctx = createMockContext({
+        message: {
+          message_id: 667,
+          caption: "@testbot красивое фото",
+          caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+        },
+      });
+
+      await game.photoHandler(ctx as Context);
+
+      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
+      expect(GameService.createGame).not.toHaveBeenCalled();
+    });
+
     it("обрабатывает ошибку и отправляет сообщение об ошибке", async () => {
       const ctx = createMockContext({
         message: {
@@ -314,19 +309,22 @@ describe("game handlers", () => {
       );
     });
 
-    it("создаёт новую игру, если игра не найдена", async () => {
+    it("создаёт новую игру при упоминании бота и game", async () => {
       (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
       const ctx = createMockContext({
         editedMessage: {
           chat: { id: 12345 },
           message_id: 888,
-          text: "Вход:\n+400 | NewUser",
+          text: "@testbot game 16.02.2025\nВход:\n+400 | NewUser",
+          entities: [{ type: "mention", offset: 0, length: 8 }],
         },
       });
       (ParserService.parseTransactions as any).mockReturnValue([
         { username: "NewUser", amount: 400, type: "in" },
       ]);
-      (ParserService.extractGameDateFromText as any).mockReturnValue(null);
+      (ParserService.extractGameDateFromText as any).mockReturnValue(
+        "2025-02-16",
+      );
       (GameService.createGame as any).mockReturnValue(11);
       (GameService.addTransactions as any).mockReturnValue(1);
 
@@ -335,7 +333,7 @@ describe("game handlers", () => {
       expect(GameService.createGame).toHaveBeenCalledWith(
         12345,
         888,
-        expect.any(String),
+        "2025-02-16",
       );
       expect(GameService.addTransactions).toHaveBeenCalledWith(
         11,
@@ -343,20 +341,20 @@ describe("game handlers", () => {
       );
       expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
         ctx,
-        expect.stringContaining("✅ Игра от"),
+        expect.stringContaining("✅ Игра от 2025-02-16 успешно создана"),
       );
     });
 
-    it("игнорирует редактирование без транзакций", async () => {
+    it("игнорирует редактирование без упоминания бота (не plain data)", async () => {
       (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
       const ctx = createMockContext({
         editedMessage: {
           chat: { id: 12345 },
           message_id: 999,
-          text: "Обычное редактирование",
+          text: "Вход:\n+300 | NoMention",
+          entities: [],
         },
       });
-      (ParserService.parseTransactions as any).mockReturnValue([]);
 
       await game.editedMessageHandler(ctx as Context);
 
@@ -369,7 +367,8 @@ describe("game handlers", () => {
         editedMessage: {
           chat: { id: 12345 },
           message_id: 1000,
-          text: "game 15.02.2026\nВход:\n+300 | Editor",
+          text: "@testbot game 15.02.2026\nВход:\n+300 | Editor",
+          entities: [{ type: "mention", offset: 0, length: 8 }],
         },
       });
       const testError = new Error("Edit processing error");

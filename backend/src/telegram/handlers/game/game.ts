@@ -28,56 +28,48 @@ export const textHandler = async (ctx: Context) => {
       }
     }
 
-    let isGameCommand = false;
-    let gameDate: string | undefined;
-    if (mentioned && text.includes("game")) {
-      isGameCommand = true;
-      gameDate =
-        ParserService.extractGameDateFromText(text) ||
-        new Date().toISOString().slice(0, 10);
+    if (!mentioned || !text.includes("game")) return;
+
+    await deleteCommandMessage(ctx);
+
+    const gameDate =
+      ParserService.extractGameDateFromText(text) ||
+      new Date().toISOString().slice(0, 10);
+
+    const lines = text
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter((l: string) => l !== "");
+    const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
+    const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
+
+    const transactions = ParserService.parseTransactions(dataLines);
+    if (transactions.length === 0) {
+      await replyWithAutoDelete(
+        ctx,
+        "⚠️ Не найдено ни одной корректной записи. Игра не создана.",
+      );
+      return;
     }
 
-    const isPlainData = !mentioned && !text.startsWith("/");
+    const gameId = GameService.createGame(
+      ctx.chat!.id,
+      ctx.message!.message_id,
+      gameDate,
+    );
+    const savedCount = GameService.addTransactions(gameId, transactions);
 
-    if (isGameCommand || isPlainData) {
-      if (isGameCommand) await deleteCommandMessage(ctx);
-
-      const lines = text
-        .split("\n")
-        .map((l: string) => l.trim())
-        .filter((l: string) => l !== "");
-      const cmdIndex = lines.findIndex((l: string) => l.includes("game"));
-      const dataLines = cmdIndex === -1 ? lines : lines.slice(cmdIndex + 1);
-
-      const transactions = ParserService.parseTransactions(dataLines);
-      if (transactions.length === 0) {
-        await replyWithAutoDelete(
-          ctx,
-          "⚠️ Не найдено ни одной корректной записи. Игра не создана.",
-        );
-        return;
-      }
-
-      const finalDate = gameDate || new Date().toISOString().slice(0, 10);
-      const gameId = GameService.createGame(
-        ctx.chat!.id,
-        ctx.message!.message_id,
-        finalDate,
+    if (savedCount > 0) {
+      await replyWithAutoDelete(
+        ctx,
+        `✅ Игра от ${gameDate} успешно создана. Добавлено записей: ${savedCount}`,
       );
-      const savedCount = GameService.addTransactions(gameId, transactions);
-
-      if (savedCount > 0) {
-        await replyWithAutoDelete(
-          ctx,
-          `✅ Игра от ${finalDate} успешно создана. Добавлено записей: ${savedCount}`,
-        );
-      } else {
-        GameService.deleteGame(ctx.chat!.id, ctx.message!.message_id);
-        await replyWithAutoDelete(
-          ctx,
-          "⚠️ Не удалось добавить транзакции. Игра удалена.",
-        );
-      }
+    } else {
+      GameService.deleteGame(ctx.chat!.id, ctx.message!.message_id);
+      await replyWithAutoDelete(
+        ctx,
+        "⚠️ Не удалось добавить транзакции. Игра удалена.",
+      );
     }
   } catch (error) {
     logger.error(`[ERROR] textHandler: ${JSON.stringify(error, null, 2)}`);
@@ -182,7 +174,7 @@ export const editedMessageHandler = async (ctx: Context) => {
       return;
     }
 
-    // 2. Игра не найдена – проверяем, заслуживает ли сообщение создания новой игры
+    // 2. Игра не найдена – проверяем, является ли сообщение явной командой с упоминанием бота
     const botUsername = ctx.botInfo.username;
     let mentioned = false;
     for (const entity of entities) {
@@ -199,10 +191,9 @@ export const editedMessageHandler = async (ctx: Context) => {
     }
 
     const isGameCommand = mentioned && text.includes("game");
-    const isPlainData = !mentioned && !text.startsWith("/");
 
-    if (!isGameCommand && !isPlainData) {
-      // Сообщение не является командой для бота и не plain data — игнорируем
+    if (!isGameCommand) {
+      // Сообщение не является явной командой — игнорируем
       return;
     }
 
