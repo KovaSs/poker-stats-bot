@@ -10,8 +10,9 @@ import type { CommandContext } from "@/types/telegram";
 
 vi.mock("@/services", () => ({
   StatsService: {
-    getFilteredStats: vi.fn(),
+    getAvailableYears: vi.fn(),
     getFilteredScores: vi.fn(),
+    getFilteredStats: vi.fn(),
     recalcStats: vi.fn(),
   },
 }));
@@ -195,6 +196,9 @@ describe("stats handlers", () => {
         message: { text: "/stats", message_id: 1 },
       });
 
+      // Мокаем getAvailableYears, чтобы вернуть список годов
+      (StatsService.getAvailableYears as any).mockReturnValue(["2024", "2025"]);
+
       await stats.statsHandler(ctx as CommandContext);
 
       expect(middlewares.deleteCommandMessage).toHaveBeenCalledWith(ctx);
@@ -266,6 +270,9 @@ describe("stats handlers", () => {
       const ctx = createMockContext({
         message: { text: "/top", message_id: 1 },
       });
+
+      // Мокаем getAvailableYears
+      (StatsService.getAvailableYears as any).mockReturnValue(["2024", "2025"]);
 
       await stats.topHandler(ctx as CommandContext);
 

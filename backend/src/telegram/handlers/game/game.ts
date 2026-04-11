@@ -157,9 +157,13 @@ export const editedMessageHandler = async (ctx: Context) => {
     const chatId = editedMessage.chat.id;
     const messageId = editedMessage.message_id;
     const text = editedMessage.text || editedMessage.caption || "";
+    const entities =
+      editedMessage.entities || editedMessage.caption_entities || [];
 
-    let game = GameRepository.findByChatAndMessage(chatId, messageId);
+    // 1. Проверяем, существует ли уже игра для этого сообщения
+    const game = GameRepository.findByChatAndMessage(chatId, messageId);
     if (game) {
+      // Обновление существующей игры
       const newDate =
         ParserService.extractGameDateFromText(text) ||
         new Date().toISOString().slice(0, 10);
@@ -178,6 +182,31 @@ export const editedMessageHandler = async (ctx: Context) => {
       return;
     }
 
+    // 2. Игра не найдена – проверяем, заслуживает ли сообщение создания новой игры
+    const botUsername = ctx.botInfo.username;
+    let mentioned = false;
+    for (const entity of entities) {
+      if (entity.type === "mention") {
+        const mention = text.substring(
+          entity.offset,
+          entity.offset + entity.length,
+        );
+        if (mention === `@${botUsername}`) {
+          mentioned = true;
+          break;
+        }
+      }
+    }
+
+    const isGameCommand = mentioned && text.includes("game");
+    const isPlainData = !mentioned && !text.startsWith("/");
+
+    if (!isGameCommand && !isPlainData) {
+      // Сообщение не является командой для бота и не plain data — игнорируем
+      return;
+    }
+
+    // 3. Парсим транзакции и создаём новую игру
     const lines = text
       .split("\n")
       .map((l: string) => l.trim())
