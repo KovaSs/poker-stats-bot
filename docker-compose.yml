@@ -6,7 +6,6 @@ services:
     container_name: telegram-stats-bot
     restart: unless-stopped
     environment:
-      - TELEGRAM_API_URL=${TELEGRAM_API_URL}
       - BOT_TOKEN=${BOT_TOKEN}
       - NODE_ENV=production
     volumes:

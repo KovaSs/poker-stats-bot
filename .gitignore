@@ -9,6 +9,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+result.md
 **/*/node_modules
 **/*/coverage
 **/*/dist
