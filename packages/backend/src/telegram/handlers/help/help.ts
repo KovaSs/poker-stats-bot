@@ -1,30 +1,6 @@
 import { Context } from "telegraf";
-import { logger } from "@/config/logger";
 
-import { deleteCommandMessage, replyWithAutoDelete } from "../../middlewares";
-
-import type { CommandContext } from "@/types/telegram";
-
-/**
- * Обработчик команды /help (с автоудалением)
- */
-export const helpHandler = async (ctx: CommandContext) => {
-  logger.info("[HANDLER] /help вызван");
-  await deleteCommandMessage(ctx);
-
-  const helpMessage = getHelpMessageText();
-  await replyWithAutoDelete(ctx, helpMessage, { parse_mode: "Markdown" });
-};
-
-/**
- * Отправляет сообщение со справкой (используется в главном меню)
- */
-export async function sendHelpMessage(ctx: Context, chatId: number) {
-  const helpMessage = getHelpMessageText();
-  await ctx.telegram.sendMessage(chatId, helpMessage, {
-    parse_mode: "Markdown",
-  });
-}
+import { replyWithAutoDelete } from "../../middlewares";
 
 /**
  * Формирует текст справочного сообщения
@@ -49,4 +25,12 @@ function getHelpMessageText(): string {
     "+1840 | @EgorVaganov1111",
     "```",
   ].join("\n");
+}
+
+/**
+ * Отправляет сообщение со справкой (используется в главном меню)
+ */
+export async function sendHelpMessage(ctx: Context, chatId: number) {
+  const helpMessage = getHelpMessageText();
+  await replyWithAutoDelete(ctx, helpMessage, { parse_mode: "Markdown" });
 }

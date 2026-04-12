@@ -25,11 +25,6 @@ export function setupBot(token: string, apiRoot?: string) {
   // Глобальный обработчик ошибок
   bot.catch(errorHandler);
 
-  // Регистрируем обработчики команд
-  bot.command("stats", handlers.statsHandler);
-  bot.command("top", handlers.topHandler);
-  bot.command("stats_update", handlers.statsUpdateHandler);
-  bot.command("help", handlers.helpHandler);
   bot.command("menu", handlers.menuHandler);
 
   bot.action(/^menu_(.+)$/, async (ctx) => {
