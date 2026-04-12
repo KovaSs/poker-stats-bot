@@ -1,37 +1,37 @@
-# ---- Этап сборки (компиляция TypeScript) ----
-FROM node:18 AS backend-builder
-WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm ci
-COPY backend/ ./
-RUN npm run build
+# syntax=docker/dockerfile:1
+FROM node:18-slim AS base
+RUN npm install -g pnpm
 
-# ---- Этап для production‑зависимостей (без dev) ----
-FROM node:18 AS backend-deps
-WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm ci --omit=dev
+# Установка всех зависимостей (включая dev) для сборки
+FROM base AS deps
+WORKDIR /app
+COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json ./
+COPY packages/backend/package.json ./packages/backend/
+RUN pnpm install --frozen-lockfile --filter backend
 
-# ---- Финальный образ ----
-FROM node:18-slim
+# Сборка TypeScript
+FROM deps AS builder
+COPY . .
+RUN pnpm --filter backend build
+
+# Создание самодостаточной продакшен‑папки (с флагом --legacy)
+FROM deps AS pruned
+RUN pnpm --filter backend --prod deploy --legacy /app/pruned
+
+# Финальный образ
+FROM node:18-slim AS runner
 WORKDIR /app
 
-# Системные зависимости для сборки нативных модулей (sqlite3)
+# Установка системных зависимостей для better-sqlite3
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
-# Копируем production‑зависимости
-COPY --from=backend-deps /app/backend/node_modules ./node_modules
-# Копируем скомпилированные файлы
-COPY --from=backend-builder /app/backend/dist ./dist
-# Копируем package.json (необязательно)
-COPY --from=backend-builder /app/backend/package.json ./
+# Копируем самодостаточную папку с продакшен‑зависимостями
+COPY --from=pruned /app/pruned .
 
-# Создаём tsconfig.json для разрешения алиасов @/*
-RUN echo '{ "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["dist/*"] } } }' > /app/tsconfig.json
+# Копируем скомпилированный код
+COPY --from=builder /app/packages/backend/dist ./dist
 
-# Папка для базы данных
 VOLUME [ "/app/data" ]
-
 EXPOSE 3000
-
-CMD [ "node", "-r", "tsconfig-paths/register", "dist/index.js" ]
+CMD ["node", "dist/index.js"]

@@ -1,5 +1,5 @@
 import { Context, NarrowedContext } from "telegraf";
-import { Update, Message } from "telegraf/typings/core/types/typegram";
+import type { Update, Message } from "telegraf/types";
 
 // Тип для текстовых команд (например, /stats, /top)
 export type CommandContext = NarrowedContext<

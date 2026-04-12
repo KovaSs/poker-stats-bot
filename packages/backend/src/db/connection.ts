@@ -8,18 +8,12 @@ import { runMigrations } from "./migrator";
 let db: Database.Database;
 
 function getDatabasePath(): string {
-  // Если путь явно передан через окружение – используем его
-  if (process.env.DB_PATH) {
-    return process.env.DB_PATH;
-  }
-
-  // В production (Docker) используем /app/data/stats.db
+  if (process.env.DB_PATH) return process.env.DB_PATH;
   if (process.env.NODE_ENV === "production") {
     return path.join("/app", "data", "stats.db");
   }
-
-  // В разработке – папка data на уровень выше backend
-  return path.join(process.cwd(), "..", "data", "stats.db");
+  // Разработка: от packages/backend поднимаемся на два уровня до корня
+  return path.resolve(process.cwd(), "../../data/stats.db");
 }
 
 export function initDB(): Database.Database {
