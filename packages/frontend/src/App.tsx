@@ -1,4 +1,7 @@
+import { useLaunchParams, initDataRaw } from "@telegram-apps/sdk-react";
 import { useEffect, useState } from "react";
+
+import type { InitData } from "@telegram-apps/sdk-react";
 
 interface UserScore {
   username: string;
@@ -6,13 +9,30 @@ interface UserScore {
 }
 
 function App() {
+  const launchParams = useLaunchParams();
   const [scores, setScores] = useState<UserScore[]>([]);
 
+  const initData = launchParams.initData as InitData | undefined;
+  const chatId = initData?.chat?.id;
+
+  const rawInitData = initDataRaw(); // вызов функции, возвращающей строку
+
   useEffect(() => {
-    fetch("/api/stats")
-      .then((res) => res.json())
-      .then(setScores);
-  }, []);
+    if (!chatId) return;
+
+    const headers: HeadersInit = {};
+    if (rawInitData) {
+      headers["Authorization"] = `tma ${rawInitData}`;
+    }
+
+    fetch(`/api/stats?chatId=${chatId}`, { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then((data) => setScores(data))
+      .catch((err) => console.error("Failed to fetch stats:", err));
+  }, [chatId, rawInitData]);
 
   return (
     <div style={{ padding: "20px", fontFamily: "sans-serif" }}>

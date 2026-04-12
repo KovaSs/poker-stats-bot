@@ -4,6 +4,8 @@ import fs from "fs";
 
 import { logger } from "@/config/logger";
 
+export const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
 function getEnvPath(): string {
   // Если путь явно задан через ENV_PATH
   if (process.env.ENV_PATH) {

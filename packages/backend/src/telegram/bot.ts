@@ -1,9 +1,9 @@
 import { Telegraf } from "telegraf";
-import https from "https";
 
 import { logger } from "@/config/logger";
 
 import { registerCallbacks } from "./callbacks";
+import { menuCallback } from "./handlers/menu";
 import { errorHandler } from "./middlewares";
 import * as handlers from "./handlers";
 
@@ -30,6 +30,12 @@ export function setupBot(token: string, apiRoot?: string) {
   bot.command("top", handlers.topHandler);
   bot.command("stats_update", handlers.statsUpdateHandler);
   bot.command("help", handlers.helpHandler);
+  bot.command("menu", handlers.menuHandler);
+
+  bot.action(/^menu_(.+)$/, async (ctx) => {
+    const match = ctx.match as string[];
+    await menuCallback(ctx, match);
+  });
 
   // Обработчики сообщений
   bot.on("text", handlers.textHandler);

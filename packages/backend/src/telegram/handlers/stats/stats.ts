@@ -184,3 +184,21 @@ export const statsUpdateHandler = async (ctx: CommandContext) => {
     await replyWithAutoDelete(ctx, "❌ Ошибка при пересчёте.");
   }
 };
+
+export async function sendStatsPeriodKeyboard(ctx: Context, chatId: number) {
+  const years = StatsService.getAvailableYears(chatId);
+  const keyboard = buildYearKeyboard("stats", years);
+  await ctx.reply("📊 Выберите период для статистики:", {
+    reply_markup: keyboard,
+    parse_mode: "Markdown",
+  });
+}
+
+export async function sendTopPeriodKeyboard(ctx: Context, chatId: number) {
+  const years = StatsService.getAvailableYears(chatId);
+  const keyboard = buildYearKeyboard("top", years);
+  await ctx.reply("🏆 Выберите период для топа:", {
+    reply_markup: keyboard,
+    parse_mode: "Markdown",
+  });
+}
