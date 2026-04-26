@@ -1,49 +1,55 @@
 import { mockTelegramEnv } from "@telegram-apps/sdk-react";
 
 if (import.meta.env.DEV && !window.Telegram?.WebApp) {
-  // Строка initData в формате query-параметров
-  const initDataRaw = new URLSearchParams([
-    [
-      "user",
-      JSON.stringify({
-        id: 12345,
-        first_name: "Dev",
-        last_name: "User",
-        username: "devuser",
-        language_code: "en",
-      }),
-    ],
-    [
-      "hash",
-      "89d6079ad6762351f38c6dbbc41bb53048019256a9513988da70f1e9f68ff84e",
-    ],
-    ["auth_date", String(Math.floor(Date.now() / 1000))],
-    ["chat_instance", "1234567890"],
-    ["chat_type", "sender"],
-    ["start_param", "debug"],
-  ]).toString();
+  // Берём структуру реальных launchParams, но с тестовым пользователем
+  const initDataObject = {
+    user: {
+      id: 12345,
+      first_name: "Dev",
+      last_name: "User",
+      username: "devuser",
+      language_code: "en",
+      allows_write_to_pm: true,
+      photo_url: "https://t.me/i/userpic/320/placeholder.svg", // необязательно
+    },
+    chat_instance: "2355408681795264684",
+    chat_type: "supergroup",
+    auth_date: Math.floor(Date.now() / 1000),
+    signature: "mock_signature",
+    hash: "mock_hash",
+  };
+
+  const initDataRaw = new URLSearchParams(
+    Object.entries(initDataObject).map(([k, v]) => [
+      k,
+      typeof v === "string" ? v : JSON.stringify(v),
+    ]),
+  ).toString();
 
   mockTelegramEnv({
-    // @ts-expect-error lol kek
-    themeParams: {
-      accentTextColor: "#6ab3f3",
-      bgColor: "#17212b",
-      buttonColor: "#5288c1",
-      buttonTextColor: "#ffffff",
-      destructiveTextColor: "#ec3942",
-      headerBgColor: "#17212b",
-      hintColor: "#708499",
-      linkColor: "#6ab3f3",
-      secondaryBgColor: "#232e3c",
-      sectionBgColor: "#17212b",
-      sectionHeaderTextColor: "#6ab3f3",
-      subtitleTextColor: "#708499",
-      textColor: "#f5f5f5",
+    launchParams: {
+      tgWebAppData: initDataRaw,
+      tgWebAppPlatform: "tdesktop",
+      tgWebAppVersion: "9.6",
+      tgWebAppThemeParams: {
+        accent_text_color: "#6ab2f2",
+        bg_color: "#17212b",
+        bottom_bar_bg_color: "#17212b",
+        button_color: "#5288c1",
+        button_text_color: "#ffffff",
+        destructive_text_color: "#ec3942",
+        header_bg_color: "#17212b",
+        hint_color: "#708499",
+        link_color: "#6ab3f3",
+        secondary_bg_color: "#232e3c",
+        section_bg_color: "#17212b",
+        section_header_text_color: "#6ab3f3",
+        section_separator_color: "#111921",
+        subtitle_text_color: "#708499",
+        text_color: "#f5f5f5",
+      },
     },
-    initDataRaw, // <-- просто передаём строку
-    version: "8",
-    platform: "tdesktop",
   });
 
-  console.info("⚠️ Мок Telegram окружения активирован");
+  console.info("⚠️ Мок Telegram окружения активирован (реальные темы)");
 }

@@ -35,28 +35,17 @@ export const App = () => {
   }, [chatId, rawInitData]);
 
   return (
-    <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
-      <h1>📊 Статистика чата</h1>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ background: "#3498db", color: "white" }}>
-            <th>#</th>
-            <th>Участник</th>
-            <th>Очки</th>
-          </tr>
-        </thead>
-        <tbody>
-          {scores.map((item, index) => (
-            <tr key={item.username} style={{ borderBottom: "1px solid #ddd" }}>
-              <td>{index + 1}</td>
-              <td>{item.username}</td>
-              <td>{item.score}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div
+      style={{
+        flexDirection: "column",
+        fontFamily: "sans-serif",
+        whiteSpace: "pre",
+        display: "flex",
+        padding: "20px",
+        width: "100vw",
+      }}
+    >
       <div>launchParams {JSON.stringify(launchParams, null, 2)}</div>
-      <div>rawInitData {JSON.stringify(rawInitData, null, 2)}</div>
     </div>
   );
 };

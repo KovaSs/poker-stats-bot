@@ -1,8 +1,7 @@
-import "./mocks/telegram"; // моки первыми
+import "./mocks/telegram"; // самый первый импорт
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-
 import {
   init as initSDK,
   initData,
@@ -13,15 +12,14 @@ import {
   swipeBehavior,
   backButton,
 } from "@telegram-apps/sdk-react";
-
 import App from "./App";
+
 import "./index.css";
 
-// Инициализируем SDK однократно до монтирования React
 initSDK();
-initData.restore(); // восстанавливаем initData из окружения (или моков)
+initData.restore();
 
-// Монтируем UI-компоненты Telegram
+// Монтируем UI-компоненты
 expandViewport();
 viewport
   .mount()
@@ -38,7 +36,6 @@ if (backButton.isSupported()) {
   backButton.mount();
 }
 
-// Теперь монтируем React-приложение
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
