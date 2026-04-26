@@ -20,7 +20,7 @@ const MAIN_MENU_KEYBOARD = {
     [
       {
         text: "🃏 Web App",
-        url: "https://40263.koara.live",
+        url: "https://t.me/MyPokerStatsBot/pokerstats",
       },
     ],
     [{ text: "📚 Помощь", callback_data: "menu_help" }],
