@@ -8,7 +8,7 @@ interface UserScore {
   score: number;
 }
 
-function App() {
+export const App = () => {
   const launchParams = useLaunchParams();
   const [scores, setScores] = useState<UserScore[]>([]);
 
@@ -59,6 +59,6 @@ function App() {
       <div>rawInitData {JSON.stringify(rawInitData, null, 2)}</div>
     </div>
   );
-}
+};
 
 export default App;

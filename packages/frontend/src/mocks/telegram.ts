@@ -1,37 +1,48 @@
 import { mockTelegramEnv } from "@telegram-apps/sdk-react";
 
-// Включаем мок только в режиме разработки и если не запущено внутри Telegram.
 if (import.meta.env.DEV && !window.Telegram?.WebApp) {
-  mockTelegramEnv({
-    launchParams: {
-      tgWebAppPlatform: "ios", // или "android", "web"
-      tgWebAppVersion: "7.2", // версия API
-      tgWebAppThemeParams: {
-        bg_color: "#ffffff",
-        text_color: "#000000",
-        hint_color: "#aaaaaa",
-        link_color: "#2481cc",
-        button_color: "#2481cc",
-        button_text_color: "#ffffff",
-      },
-    },
-    initData: {
-      query_id: "dev_query",
-      user: {
+  // Строка initData в формате query-параметров
+  const initDataRaw = new URLSearchParams([
+    [
+      "user",
+      JSON.stringify({
         id: 12345,
         first_name: "Dev",
         last_name: "User",
         username: "devuser",
         language_code: "en",
-      },
-      // 👇 Вот правильное место для данных о чате
-      chat: {
-        id: 123456789, // ваш тестовый ID группы
-        type: "supergroup",
-        title: "Test Chat",
-      },
-      auth_date: Math.floor(Date.now() / 1000),
-      hash: "dev_hash",
+      }),
+    ],
+    [
+      "hash",
+      "89d6079ad6762351f38c6dbbc41bb53048019256a9513988da70f1e9f68ff84e",
+    ],
+    ["auth_date", String(Math.floor(Date.now() / 1000))],
+    ["chat_instance", "1234567890"],
+    ["chat_type", "sender"],
+    ["start_param", "debug"],
+  ]).toString();
+
+  mockTelegramEnv({
+    themeParams: {
+      accentTextColor: "#6ab3f3",
+      bgColor: "#17212b",
+      buttonColor: "#5288c1",
+      buttonTextColor: "#ffffff",
+      destructiveTextColor: "#ec3942",
+      headerBgColor: "#17212b",
+      hintColor: "#708499",
+      linkColor: "#6ab3f3",
+      secondaryBgColor: "#232e3c",
+      sectionBgColor: "#17212b",
+      sectionHeaderTextColor: "#6ab3f3",
+      subtitleTextColor: "#708499",
+      textColor: "#f5f5f5",
     },
+    initDataRaw, // <-- просто передаём строку
+    version: "8",
+    platform: "tdesktop",
   });
+
+  console.info("⚠️ Мок Telegram окружения активирован");
 }
