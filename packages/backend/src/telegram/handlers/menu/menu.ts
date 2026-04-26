@@ -17,6 +17,12 @@ const MAIN_MENU_KEYBOARD = {
       { text: "📊 Статистика", callback_data: "menu_stats" },
       { text: "🏆 Топ", callback_data: "menu_top" },
     ],
+    [
+      {
+        text: "Web App",
+        web_app: { url: "https://t.me/MyPokerStatsBot/pokerstats" },
+      },
+    ],
     [{ text: "📚 Помощь", callback_data: "menu_help" }],
   ],
 };
