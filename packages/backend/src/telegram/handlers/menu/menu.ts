@@ -19,8 +19,8 @@ const MAIN_MENU_KEYBOARD = {
     ],
     [
       {
-        text: "Web App",
-        web_app: { url: "https://t.me/MyPokerStatsBot/pokerstats" },
+        text: "🌐 Web App",
+        url: "https://t.me/MyPokerStatsBot/pokerstats",
       },
     ],
     [{ text: "📚 Помощь", callback_data: "menu_help" }],
