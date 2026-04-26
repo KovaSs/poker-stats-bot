@@ -15,7 +15,7 @@ function App() {
   const initData = launchParams.initData as InitData | undefined;
   const chatId = initData?.chat?.id;
 
-  const rawInitData = initDataRaw(); // вызов функции, возвращающей строку
+  const rawInitData = initDataRaw();
 
   useEffect(() => {
     if (!chatId) return;
@@ -55,6 +55,8 @@ function App() {
           ))}
         </tbody>
       </table>
+      <div>launchParams {JSON.stringify(launchParams, null, 2)}</div>
+      <div>rawInitData {JSON.stringify(rawInitData, null, 2)}</div>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import "./mocks/telegram";
+
 import { createRoot } from "react-dom/client";
 import { StrictMode } from "react";
 

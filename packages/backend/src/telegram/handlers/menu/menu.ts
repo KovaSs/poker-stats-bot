@@ -19,7 +19,7 @@ const MAIN_MENU_KEYBOARD = {
     ],
     [
       {
-        text: "🌐 Web App",
+        text: "🃏 Web App",
         url: "https://t.me/MyPokerStatsBot/pokerstats",
       },
     ],
