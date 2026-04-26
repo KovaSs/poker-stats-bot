@@ -24,6 +24,7 @@ if (import.meta.env.DEV && !window.Telegram?.WebApp) {
   ]).toString();
 
   mockTelegramEnv({
+    // @ts-expect-error lol kek
     themeParams: {
       accentTextColor: "#6ab3f3",
       bgColor: "#17212b",
