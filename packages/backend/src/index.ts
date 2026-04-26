@@ -3,7 +3,7 @@ import { setupBot } from "@/telegram/bot";
 import { initDB } from "@/db/connection";
 import { logger } from "@/config/logger";
 
-// import { startApiServer } from "./api/server";
+import { startApiServer } from "./api/server";
 
 async function main() {
   initDB();
@@ -11,7 +11,7 @@ async function main() {
   bot.launch();
   logger.info("Bot started");
 
-  // startApiServer();
+  startApiServer();
 
   process.once("SIGINT", () => bot.stop("SIGINT"));
   process.once("SIGTERM", () => bot.stop("SIGTERM"));

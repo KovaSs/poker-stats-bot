@@ -2,7 +2,6 @@ const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
 
-const newLocal = "discovery-career";
 // ----------------------------------------------------------------------
 // Фиксированные настройки (без параметров командной строки)
 // ----------------------------------------------------------------------
@@ -26,15 +25,6 @@ const IGNORE_DIRS = new Set([
   ".helm",
   ".husky",
   ".nx",
-  // apps/
-  newLocal,
-  // 'discovery-gw',
-  "discovery-lego",
-  "discovery-permissions",
-  "discovery-s3",
-  "discovery-search",
-  "discovery-segments",
-  "discovery-widgets",
 ]);
 
 // Игнорируемые файлы по имени (на любом уровне)

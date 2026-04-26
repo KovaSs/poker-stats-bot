@@ -6,6 +6,7 @@ import { sendHelpMessage } from "../help";
 
 import type { CallbackHandler } from "../../callbacks/types";
 import type { CommandContext } from "@/types/telegram";
+import type { Telegram } from "telegraf";
 
 /**
  * Клавиатура главного меню
@@ -78,3 +79,22 @@ export const menuCallback: CallbackHandler = async (ctx, match) => {
     await ctx.reply("❌ Произошла ошибка. Попробуйте позже.");
   }
 };
+
+export async function setChatMenuButton(
+  telegram: Telegram,
+  chatId: number,
+): Promise<void> {
+  try {
+    await telegram.setChatMenuButton({
+      chatId: Number(chatId),
+      menuButton: {
+        type: "web_app",
+        text: "📊 App",
+        web_app: { url: "https://40263.koara.live" },
+      },
+    });
+    logger.info(`[MENU] Кнопка установлена для чата ${chatId}`);
+  } catch (error) {
+    logger.error(`[MENU] Ошибка установки кнопки для чата ${chatId}: ${error}`);
+  }
+}
