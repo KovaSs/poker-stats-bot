@@ -42,21 +42,22 @@ interface UserStats {
 
 export const App = () => {
   const lp = useLaunchParams();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const initDataRaw = (lp as any).tgWebAppData as string;
   const startParam = lp.tgWebAppStartParam ?? "";
   const chatId = startParam.startsWith("chat_")
     ? Number(startParam.slice(5))
     : undefined;
-  const initDataRaw = lp.tgWebAppData;
 
-  const [filter, setFilter] = useState<string | undefined>(undefined); // undefined = последний год
+  const [filter, setFilter] = useState<string | undefined>(undefined);
 
   const {
     data: stats,
     error,
     isLoading,
   } = useQuery({
-    queryFn: () => fetchStats(chatId!, filter!, initDataRaw!),
     queryKey: ["stats", chatId, filter],
+    queryFn: () => fetchStats(chatId!, filter!, initDataRaw),
     enabled: !!chatId && !!initDataRaw,
   });
 
