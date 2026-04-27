@@ -1,6 +1,6 @@
 import { useLaunchParams } from "@telegram-apps/sdk-react";
-import { useEffect, useState, useCallback } from "react";
-
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -13,16 +13,25 @@ import {
   Paper,
   Alert,
 } from "@mui/material";
+
 import { FilterBar } from "../FilterBar";
 
 import styles from "./styles.module.scss";
 
-interface UserStats {
-  username: string;
-  total_in: number;
-  total_out: number;
-  games_count: number;
-}
+const fetchStats = (
+  chatId: number,
+  filter: string | undefined,
+  initDataRaw: string,
+) => {
+  const headers: HeadersInit = {};
+  if (initDataRaw) headers["Authorization"] = `tma ${initDataRaw}`;
+  let url = `/api/stats?chatId=${chatId}`;
+  if (filter) url += `&filter=${filter}`;
+  return fetch(url, { headers }).then((res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  });
+};
 
 export const App = () => {
   const lp = useLaunchParams();
@@ -32,48 +41,17 @@ export const App = () => {
     : undefined;
   const initDataRaw = lp.tgWebAppData;
 
-  const [stats, setStats] = useState<UserStats[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string | undefined>(undefined); // undefined = последний год
 
-  const loadStats = useCallback(() => {
-    if (!chatId) return;
-    setStats(null);
-    setError(null);
-
-    const controller = new AbortController();
-    const headers: HeadersInit = {};
-    if (initDataRaw) {
-      headers["Authorization"] = `tma ${initDataRaw}`;
-    }
-
-    let url = `/api/stats?chatId=${chatId}`;
-    if (filter) {
-      url += `&filter=${filter}`;
-    }
-
-    fetch(url, { headers, signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        console.log("✅ Stats loaded:", data);
-        setStats(data);
-      })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
-          console.error("❌ Failed to fetch stats:", err);
-          setError(err.message);
-        }
-      });
-
-    return () => controller.abort();
-  }, [chatId, initDataRaw, filter]);
-
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+  const {
+    data: stats,
+    error,
+    isLoading,
+  } = useQuery({
+    queryFn: () => fetchStats(chatId!, filter!, initDataRaw!),
+    queryKey: ["stats", chatId, filter],
+    enabled: !!chatId && !!initDataRaw,
+  });
 
   return (
     <div className={styles.container}>
@@ -90,12 +68,8 @@ export const App = () => {
         />
       )}
 
-      {stats === null && !error && <CircularProgress />}
-      {error && (
-        <Alert severity="error" className={styles.errorText}>
-          Ошибка: {error}
-        </Alert>
-      )}
+      {isLoading && <CircularProgress />}
+      {error && <Alert severity="error">Ошибка: {error.message}</Alert>}
       {stats && stats.length === 0 && <Typography>Нет данных</Typography>}
 
       {stats && stats.length > 0 && (

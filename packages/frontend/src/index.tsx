@@ -1,8 +1,9 @@
 import "./mocks/telegram"; // самый первый импорт
 
 import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
-import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, useState, useEffect } from "react";
+import { createRoot } from "react-dom/client";
 import {
   init as initSDK,
   initData,
@@ -36,7 +37,17 @@ if (backButton.isSupported()) {
   backButton.mount();
 }
 
-function AppWithTheme() {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // данные считаются свежими 5 минут
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// eslint-disable-next-line react-refresh/only-export-components
+const AppWithTheme = () => {
   const [theme, setTheme] = useState(
     createTheme({ palette: { mode: "dark" } }),
   );
@@ -73,6 +84,7 @@ function AppWithTheme() {
         fontFamily: "system-ui, Avenir, Helvetica, Arial, sans-serif",
       },
     });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(newTheme);
   }, []);
 
@@ -82,10 +94,12 @@ function AppWithTheme() {
       <App />
     </ThemeProvider>
   );
-}
+};
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AppWithTheme />
+    <QueryClientProvider client={queryClient}>
+      <AppWithTheme />
+    </QueryClientProvider>
   </StrictMode>,
 );
