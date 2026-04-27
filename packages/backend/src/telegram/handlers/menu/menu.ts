@@ -6,7 +6,6 @@ import { sendHelpMessage } from "../help";
 
 import type { CallbackHandler } from "../../callbacks/types";
 import type { CommandContext } from "@/types/telegram";
-import type { Telegram } from "telegraf";
 
 /**
  * Обработчик команды /menu

@@ -5,7 +5,7 @@ import { authMiddleware } from "@/middlewares/auth";
 import { logger } from "@/config/logger";
 import { API_PORT } from "@/config/env";
 
-import statsRouter from "./routes/stats";
+import { statsRouter, yearsRouter } from "./routes";
 
 export function startApiServer() {
   const app = express();
@@ -14,6 +14,7 @@ export function startApiServer() {
 
   app.use(express.json());
 
+  app.use("/api/years", authMiddleware, yearsRouter);
   app.use("/api/stats", authMiddleware, statsRouter);
 
   app.use((req, res) => {

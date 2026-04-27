@@ -6,7 +6,7 @@ import { StatsService } from "@/services";
 
 import statsRouter from "./stats";
 
-vi.mock("../../services", () => ({
+vi.mock("@/services", () => ({
   StatsService: {
     getFilteredStats: vi.fn(),
   },

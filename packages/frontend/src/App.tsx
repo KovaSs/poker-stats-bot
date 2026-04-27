@@ -1,5 +1,6 @@
 import { useLaunchParams } from "@telegram-apps/sdk-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { FilterBar } from "./components/FilterBar";
 
 interface UserStats {
   username: string;
@@ -10,23 +11,18 @@ interface UserStats {
 
 export const App = () => {
   const lp = useLaunchParams();
-
-  // chatId — только из tgWebAppStartParam
   const startParam = lp.tgWebAppStartParam ?? "";
   const chatId = startParam.startsWith("chat_")
     ? Number(startParam.slice(5))
     : undefined;
-
-  // сырая строка для заголовка Authorization
   const initDataRaw = lp.tgWebAppData;
 
   const [stats, setStats] = useState<UserStats[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string | undefined>(undefined); // undefined = последний год
 
-  useEffect(() => {
-    console.log("chatId:", chatId, "startParam:", startParam);
+  const loadStats = useCallback(() => {
     if (!chatId) return;
-
     setStats(null);
     setError(null);
 
@@ -36,10 +32,12 @@ export const App = () => {
       headers["Authorization"] = `tma ${initDataRaw}`;
     }
 
-    fetch(`/api/stats?chatId=${chatId}&filter=all`, {
-      headers,
-      signal: controller.signal,
-    })
+    let url = `/api/stats?chatId=${chatId}`;
+    if (filter) {
+      url += `&filter=${filter}`;
+    }
+
+    fetch(url, { headers, signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -56,11 +54,24 @@ export const App = () => {
       });
 
     return () => controller.abort();
-  }, [chatId, initDataRaw]);
+  }, [chatId, initDataRaw, filter]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   return (
     <div style={{ padding: "16px", color: "var(--tg-theme-text-color, #fff)" }}>
-      <h2>📊 Статистика (всё время)</h2>
+      <h2>📊 Статистика</h2>
+
+      {chatId && initDataRaw && (
+        <FilterBar
+          chatId={chatId}
+          currentFilter={filter}
+          onFilterChange={setFilter}
+          initDataRaw={initDataRaw}
+        />
+      )}
 
       {stats === null && !error && <div>Загрузка...</div>}
       {error && <div style={{ color: "red" }}>Ошибка: {error}</div>}
