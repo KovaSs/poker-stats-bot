@@ -6,15 +6,17 @@ export const authMiddleware = async (
   res: Response,
   next: NextFunction,
 ) => {
-  // В dev-режиме (или при SKIP_AUTH=true) пропускаем без проверки
   if (
     process.env.NODE_ENV !== "production" ||
     process.env.SKIP_AUTH === "true"
   ) {
+    console.log("[AUTH] SKIP_AUTH is enabled, skipping validation");
     return next();
   }
 
   const authHeader = req.headers["authorization"];
+  console.log("[AUTH] raw header:", authHeader);
+
   const initDataRaw = authHeader?.startsWith("tma ")
     ? authHeader.substring(4)
     : null;
@@ -27,8 +29,10 @@ export const authMiddleware = async (
     const { validate } = await import("@tma.js/init-data-node");
     validate(initDataRaw, BOT_TOKEN);
     next();
-  } catch (error) {
-    console.error("Init data validation failed:", error);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error("Init data validation failed:", error.message);
+    console.error("Init data raw:", initDataRaw);
     return res.status(401).json({ error: "Unauthorized: Invalid init data" });
   }
 };
