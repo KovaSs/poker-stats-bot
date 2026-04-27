@@ -9,6 +9,7 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - NODE_ENV=production
+      - SKIP_AUTH=true
       - API_PORT=3000
     volumes:
       - ./data:/app/data
