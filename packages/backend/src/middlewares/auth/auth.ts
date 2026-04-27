@@ -15,7 +15,7 @@ export const authMiddleware = async (
   }
 
   const authHeader = req.headers["authorization"];
-  console.log("[AUTH] raw header:", authHeader);
+  console.log("[AUTH] raw header:", JSON.stringify(authHeader, null, 2));
 
   const initDataRaw = authHeader?.startsWith("tma ")
     ? authHeader.substring(4)
@@ -32,7 +32,7 @@ export const authMiddleware = async (
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));
     console.error("Init data validation failed:", error.message);
-    console.error("Init data raw:", initDataRaw);
+    console.error("Init data raw:", JSON.stringify(initDataRaw, null, 2));
     return res.status(401).json({ error: "Unauthorized: Invalid init data" });
   }
 };
