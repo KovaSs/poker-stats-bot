@@ -33,6 +33,13 @@ const fetchStats = (
   });
 };
 
+interface UserStats {
+  username: string;
+  total_in: number;
+  total_out: number;
+  games_count: number;
+}
+
 export const App = () => {
   const lp = useLaunchParams();
   const startParam = lp.tgWebAppStartParam ?? "";
@@ -89,7 +96,7 @@ export const App = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {stats.map((u, i) => {
+              {stats.map((u: UserStats, i: number) => {
                 const balance = u.total_out - u.total_in;
                 const sign = balance >= 0 ? "+" : "";
                 return (
