@@ -17,6 +17,7 @@ if (import.meta.env.DEV && !window.Telegram?.WebApp) {
     auth_date: Math.floor(Date.now() / 1000),
     signature: "mock_signature",
     hash: "mock_hash",
+    start_param: "chat_-1002491492186",
   };
 
   const initDataRaw = new URLSearchParams(
@@ -28,25 +29,26 @@ if (import.meta.env.DEV && !window.Telegram?.WebApp) {
 
   mockTelegramEnv({
     launchParams: {
-      tgWebAppData: initDataRaw,
+      tgWebAppStartParam: "chat_-1002491492186",
       tgWebAppPlatform: "tdesktop",
+      tgWebAppData: initDataRaw,
       tgWebAppVersion: "9.6",
       tgWebAppThemeParams: {
-        accent_text_color: "#6ab2f2",
-        bg_color: "#17212b",
-        bottom_bar_bg_color: "#17212b",
-        button_color: "#5288c1",
-        button_text_color: "#ffffff",
-        destructive_text_color: "#ec3942",
-        header_bg_color: "#17212b",
-        hint_color: "#708499",
-        link_color: "#6ab3f3",
-        secondary_bg_color: "#232e3c",
-        section_bg_color: "#17212b",
         section_header_text_color: "#6ab3f3",
         section_separator_color: "#111921",
+        destructive_text_color: "#ec3942",
         subtitle_text_color: "#708499",
+        bottom_bar_bg_color: "#17212b",
+        secondary_bg_color: "#232e3c",
+        accent_text_color: "#6ab2f2",
+        button_text_color: "#ffffff",
+        section_bg_color: "#17212b",
+        header_bg_color: "#17212b",
+        button_color: "#5288c1",
+        hint_color: "#708499",
         text_color: "#f5f5f5",
+        link_color: "#6ab3f3",
+        bg_color: "#17212b",
       },
     },
   });

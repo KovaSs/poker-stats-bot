@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-
 import { BOT_TOKEN } from "@/config/env";
 
 export const authMiddleware = async (
@@ -7,6 +6,14 @@ export const authMiddleware = async (
   res: Response,
   next: NextFunction,
 ) => {
+  // В dev-режиме (или при SKIP_AUTH=true) пропускаем без проверки
+  if (
+    process.env.NODE_ENV !== "production" ||
+    process.env.SKIP_AUTH === "true"
+  ) {
+    return next();
+  }
+
   const authHeader = req.headers["authorization"];
   const initDataRaw = authHeader?.startsWith("tma ")
     ? authHeader.substring(4)
@@ -17,7 +24,6 @@ export const authMiddleware = async (
   }
 
   try {
-    // Динамически импортируем ESM-модуль
     const { validate } = await import("@tma.js/init-data-node");
     validate(initDataRaw, BOT_TOKEN);
     next();
