@@ -13,7 +13,10 @@ export const App = () => {
   const [scores, setScores] = useState<UserScore[]>([]);
 
   const initData = launchParams.initData as InitData | undefined;
-  const chatId = initData?.chat?.id;
+  const startParam = initData?.start_param; // строка "chat_-100..."
+  const chatId = startParam?.startsWith("chat_")
+    ? Number(startParam.substring(5))
+    : undefined;
 
   const rawInitData = initDataRaw();
 
@@ -46,6 +49,9 @@ export const App = () => {
       }}
     >
       <div>launchParams {JSON.stringify(launchParams, null, 2)}</div>
+      <div>
+        Scores {chatId} {JSON.stringify(scores, null, 2)}
+      </div>
     </div>
   );
 };
