@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
+
 import { BOT_TOKEN } from "@/config/env";
+import { logger } from "@/config/logger";
 
 export const authMiddleware = async (
   req: Request,
@@ -10,12 +12,12 @@ export const authMiddleware = async (
     process.env.NODE_ENV !== "production" ||
     process.env.SKIP_AUTH === "true"
   ) {
-    console.log("[AUTH] SKIP_AUTH is enabled, skipping validation");
+    logger.info("[AUTH] SKIP_AUTH is enabled, skipping validation");
     return next();
   }
 
   const authHeader = req.headers["authorization"];
-  console.log("[AUTH] raw header:", JSON.stringify(authHeader, null, 2));
+  logger.info(`[AUTH] raw header: ${JSON.stringify(authHeader, null, 2)}`);
 
   const initDataRaw = authHeader?.startsWith("tma ")
     ? authHeader.substring(4)
@@ -31,8 +33,8 @@ export const authMiddleware = async (
     next();
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));
-    console.error("Init data validation failed:", error.message);
-    console.error("Init data raw:", JSON.stringify(initDataRaw, null, 2));
+    logger.error(`Init data validation failed: ${error.message}`);
+    logger.error(`Init data raw:: ${JSON.stringify(initDataRaw, null, 2)}`);
     return res.status(401).json({ error: "Unauthorized: Invalid init data" });
   }
 };
