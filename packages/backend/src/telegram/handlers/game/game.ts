@@ -6,9 +6,17 @@ import { logger } from "@/config/logger";
 
 import { deleteCommandMessage, replyWithAutoDelete } from "../../middlewares";
 
+type TelegramMessage = {
+  caption_entities?: { type: string; offset: number; length: number }[];
+  entities?: { type: string; offset: number; length: number }[];
+  message_id: number;
+  caption?: string;
+  text?: string;
+};
+
 export const textHandler = async (ctx: Context) => {
   try {
-    const msg = ctx.message as any;
+    const msg = ctx.message as TelegramMessage;
     const text = msg.text || msg.caption;
     if (!text) return;
 
@@ -82,12 +90,12 @@ export const textHandler = async (ctx: Context) => {
 
 export const photoHandler = async (ctx: Context) => {
   try {
-    const caption = (ctx.message as any)?.caption;
+    const caption = (ctx.message as TelegramMessage)?.caption;
     if (!caption) return;
 
     const text = caption;
     const botUsername = ctx.botInfo.username;
-    const entities = (ctx.message as any).caption_entities || [];
+    const entities = (ctx.message as TelegramMessage).caption_entities || [];
     let mentioned = false;
     for (const entity of entities) {
       if (entity.type === "mention") {
@@ -143,7 +151,7 @@ export const photoHandler = async (ctx: Context) => {
 
 export const editedMessageHandler = async (ctx: Context) => {
   try {
-    const editedMessage = ctx.editedMessage as any;
+    const editedMessage = ctx.editedMessage as TelegramMessage;
     if (!editedMessage) return;
 
     const chatId = editedMessage.chat.id;

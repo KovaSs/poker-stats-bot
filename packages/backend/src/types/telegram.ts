@@ -1,4 +1,5 @@
 import { Context, NarrowedContext } from "telegraf";
+
 import type { Update, Message } from "telegraf/types";
 
 // Тип для текстовых команд (например, /stats, /top)

@@ -11,18 +11,6 @@ export interface UserRow {
 }
 
 export const UserRepository = {
-  findByUsername(username: string): UserRow | null {
-    const stmt = getDB().prepare(`SELECT * FROM users WHERE username = ?`);
-    const row = stmt.get(username) as UserRow | undefined;
-    return row || null;
-  },
-
-  findByTelegramId(telegramId: number): UserRow | null {
-    const stmt = getDB().prepare(`SELECT * FROM users WHERE telegram_id = ?`);
-    const row = stmt.get(telegramId) as UserRow | undefined;
-    return row || null;
-  },
-
   upsert(user: Partial<UserRow> & { username: string }): void {
     // Сначала пробуем обновить, если есть, иначе вставляем
     const existing = this.findByUsername(user.username);
@@ -53,10 +41,6 @@ export const UserRepository = {
     logger.info(`[DB] Upsert пользователя ${user.username}`);
   },
 
-  clear(): void {
-    getDB().prepare(`DELETE FROM users`).run();
-  },
-
   insertMany(
     users: {
       username: string;
@@ -83,5 +67,21 @@ export const UserRepository = {
     });
     insert(users);
     logger.info(`[DB] Вставлено ${users.length} пользователей`);
+  },
+
+  findByTelegramId(telegramId: number): UserRow | null {
+    const stmt = getDB().prepare(`SELECT * FROM users WHERE telegram_id = ?`);
+    const row = stmt.get(telegramId) as UserRow | undefined;
+    return row || null;
+  },
+
+  findByUsername(username: string): UserRow | null {
+    const stmt = getDB().prepare(`SELECT * FROM users WHERE username = ?`);
+    const row = stmt.get(username) as UserRow | undefined;
+    return row || null;
+  },
+
+  clear(): void {
+    getDB().prepare(`DELETE FROM users`).run();
   },
 };

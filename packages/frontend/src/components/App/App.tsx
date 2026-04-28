@@ -1,6 +1,3 @@
-import { useLaunchParams } from "@telegram-apps/sdk-react";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -13,6 +10,9 @@ import {
   Paper,
   Alert,
 } from "@mui/material";
+import { useLaunchParams } from "@telegram-apps/sdk-react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { FilterBar } from "../FilterBar";
 
@@ -34,10 +34,10 @@ const fetchStats = (
 };
 
 interface UserStats {
+  games_count: number;
+  total_out: number;
   username: string;
   total_in: number;
-  total_out: number;
-  games_count: number;
 }
 
 export const App = () => {
@@ -53,11 +53,11 @@ export const App = () => {
 
   const {
     data: stats,
-    error,
     isLoading,
+    error,
   } = useQuery({
-    queryKey: ["stats", chatId, filter],
     queryFn: () => fetchStats(chatId!, filter!, initDataRaw),
+    queryKey: ["stats", chatId, filter],
     enabled: !!chatId && !!initDataRaw,
   });
 

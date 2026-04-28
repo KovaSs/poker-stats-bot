@@ -23,7 +23,7 @@ describe("GameRepository", () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    (getDB as any).mockReturnValue(testDB);
+    getDB.mockReturnValue(testDB);
   });
 
   it("создаёт игру и возвращает ID", () => {

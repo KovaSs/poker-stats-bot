@@ -1,9 +1,5 @@
 import "./mocks/telegram"; // самый первый импорт
 
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { StrictMode, useState, useEffect } from "react";
-import { createRoot } from "react-dom/client";
 import {
   init as initSDK,
   initData,
@@ -14,6 +10,10 @@ import {
   swipeBehavior,
   backButton,
 } from "@telegram-apps/sdk-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { StrictMode, useState, useEffect } from "react";
+import { createRoot } from "react-dom/client";
 
 import { App } from "./components";
 
@@ -31,6 +31,7 @@ viewport
     viewport.requestFullscreen();
     swipeBehavior.disableVertical();
   })
+  // eslint-disable-next-line no-console
   .catch(console.error);
 
 if (backButton.isSupported()) {
@@ -40,13 +41,12 @@ if (backButton.isSupported()) {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // данные считаются свежими 5 минут
       refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // данные считаются свежими 5 минут
     },
   },
 });
 
-// eslint-disable-next-line react-refresh/only-export-components
 const AppWithTheme = () => {
   const [theme, setTheme] = useState(
     createTheme({ palette: { mode: "dark" } }),
@@ -56,35 +56,34 @@ const AppWithTheme = () => {
     const rootStyles = getComputedStyle(document.documentElement);
     const newTheme = createTheme({
       palette: {
-        mode: "dark",
+        background: {
+          paper:
+            rootStyles
+              .getPropertyValue("--tg-theme-secondary-bg-color")
+              .trim() || "#232e3c",
+          default:
+            rootStyles.getPropertyValue("--tg-theme-bg-color").trim() ||
+            "#17212b",
+        },
+        text: {
+          secondary:
+            rootStyles.getPropertyValue("--tg-theme-hint-color").trim() ||
+            "#708499",
+          primary:
+            rootStyles.getPropertyValue("--tg-theme-text-color").trim() ||
+            "#f5f5f5",
+        },
         primary: {
           main:
             rootStyles.getPropertyValue("--tg-theme-button-color").trim() ||
             "#5288c1",
         },
-        background: {
-          default:
-            rootStyles.getPropertyValue("--tg-theme-bg-color").trim() ||
-            "#17212b",
-          paper:
-            rootStyles
-              .getPropertyValue("--tg-theme-secondary-bg-color")
-              .trim() || "#232e3c",
-        },
-        text: {
-          primary:
-            rootStyles.getPropertyValue("--tg-theme-text-color").trim() ||
-            "#f5f5f5",
-          secondary:
-            rootStyles.getPropertyValue("--tg-theme-hint-color").trim() ||
-            "#708499",
-        },
+        mode: "dark",
       },
       typography: {
         fontFamily: "system-ui, Avenir, Helvetica, Arial, sans-serif",
       },
     });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(newTheme);
   }, []);
 

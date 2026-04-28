@@ -30,7 +30,7 @@ function getHelpMessageText(): string {
 /**
  * Отправляет сообщение со справкой (используется в главном меню)
  */
-export async function sendHelpMessage(ctx: Context, chatId: number) {
+export async function sendHelpMessage(ctx: Context) {
   const helpMessage = getHelpMessageText();
   await replyWithAutoDelete(ctx, helpMessage, { parse_mode: "Markdown" });
 }

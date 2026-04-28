@@ -14,7 +14,7 @@ export function parseFilter(filter: string): string | undefined {
 export async function deleteSourceMessage(ctx: Context): Promise<void> {
   try {
     await ctx.deleteMessage();
-  } catch (e) {
+  } catch {
     logger.warn("Не удалось удалить сообщение с клавиатурой");
   }
 }

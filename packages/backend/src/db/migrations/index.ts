@@ -1,13 +1,12 @@
 import { Database } from "better-sqlite3";
 
 export interface Migration {
-  name: string;
   up: (db: Database) => void;
+  name: string;
 }
 
 export const migrations: Migration[] = [
   {
-    name: "001_initial_schema",
     up: (db: Database) => {
       // Таблица games
       db.exec(`
@@ -51,9 +50,9 @@ export const migrations: Migration[] = [
         CREATE INDEX IF NOT EXISTS idx_games_game_date ON games(game_date);
       `);
     },
+    name: "001_initial_schema",
   },
   {
-    name: "002_migrate_user_stats",
     up: (db: Database) => {
       // Проверяем существование старой таблицы user_stats
       const tableExists = db
@@ -69,5 +68,6 @@ export const migrations: Migration[] = [
         db.exec(`DROP TABLE user_stats`);
       }
     },
+    name: "002_migrate_user_stats",
   },
 ];

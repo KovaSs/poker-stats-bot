@@ -1,6 +1,6 @@
-import { logger } from "@/config/logger";
-
 import { Context } from "telegraf";
+
+import { logger } from "@/config/logger";
 
 export async function deleteCommandMessage(ctx: Context) {
   if (ctx.message && "message_id" in ctx.message) {
@@ -20,7 +20,7 @@ export async function deleteCommandMessage(ctx: Context) {
 export async function replyWithAutoDelete(
   ctx: Context,
   text: string,
-  extra?: any,
+  extra?: Record<string, unknown>,
   delayMs: number = 30000,
 ) {
   try {

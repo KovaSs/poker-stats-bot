@@ -10,18 +10,18 @@ import { GameService } from "./game.service";
 
 vi.mock("@/db/repositories/game.repository", () => ({
   GameRepository: {
-    create: vi.fn(),
+    deleteByChatAndMessage: vi.fn(),
     findByChatAndMessage: vi.fn(),
     updateDate: vi.fn(),
+    create: vi.fn(),
     delete: vi.fn(),
-    deleteByChatAndMessage: vi.fn(),
   },
 }));
 
 vi.mock("@/db/repositories/transaction.repository", () => ({
   TransactionRepository: {
-    add: vi.fn(),
     deleteByGameId: vi.fn(),
+    add: vi.fn(),
   },
 }));
 
@@ -39,7 +39,7 @@ describe("GameService", () => {
   describe("createGame", () => {
     it("создаёт игру и возвращает gameId", () => {
       const mockGameId = 42;
-      (GameRepository.create as any).mockReturnValue(mockGameId);
+      GameRepository.create.mockReturnValue(mockGameId);
 
       const result = GameService.createGame(123, 456, "2026-03-28");
 
@@ -120,14 +120,14 @@ describe("GameService", () => {
       const chatId = 123;
       const messageId = 456;
       const mockGame = {
-        id: 5,
-        chat_id: chatId,
         message_id: messageId,
+        chat_id: chatId,
         game_date: null,
         created_at: "",
+        id: 5,
       };
-      (GameRepository.findByChatAndMessage as any).mockReturnValue(mockGame);
-      (TransactionRepository.deleteByGameId as any).mockReturnValue(3); // количество удалённых транзакций
+      GameRepository.findByChatAndMessage.mockReturnValue(mockGame);
+      TransactionRepository.deleteByGameId.mockReturnValue(3); // количество удалённых транзакций
 
       const result = GameService.deleteGame(chatId, messageId);
 
@@ -142,7 +142,7 @@ describe("GameService", () => {
     });
 
     it("возвращает false, если игра не найдена", () => {
-      (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
+      GameRepository.findByChatAndMessage.mockReturnValue(null);
 
       const result = GameService.deleteGame(123, 456);
 

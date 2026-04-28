@@ -33,7 +33,7 @@ describe("TransactionRepository", () => {
         FOREIGN KEY(game_id) REFERENCES games(id)
       );
     `);
-    (getDB as any).mockReturnValue(testDB);
+    getDB.mockReturnValue(testDB);
   });
 
   describe("add", () => {

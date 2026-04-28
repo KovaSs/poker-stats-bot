@@ -18,32 +18,6 @@ function buildFilter(filter?: string | "all"): Filter {
 }
 
 export const StatsService = {
-  getFilteredStats(chatId: number, filter?: string | "all") {
-    const f = buildFilter(filter);
-    if (f.all) {
-      return TransactionRepository.getFilteredStats(chatId);
-    }
-    if (f.year) {
-      return TransactionRepository.getFilteredStats(chatId, { year: f.year });
-    }
-    return TransactionRepository.getFilteredStats(chatId, {
-      sinceDate: f.sinceDate,
-    });
-  },
-
-  getFilteredScores(chatId: number, filter?: string | "all") {
-    const f = buildFilter(filter);
-    if (f.all) {
-      return TransactionRepository.getFilteredScores(chatId);
-    }
-    if (f.year) {
-      return TransactionRepository.getFilteredScores(chatId, { year: f.year });
-    }
-    return TransactionRepository.getFilteredScores(chatId, {
-      sinceDate: f.sinceDate,
-    });
-  },
-
   recalcStats(): void {
     logger.info("[StatsService] Пересчёт статистики...");
     // Очищаем таблицу users
@@ -59,7 +33,7 @@ export const StatsService = {
     for (const row of rows) {
       const key = row.username;
       if (!userMap.has(key)) {
-        userMap.set(key, { total_in: 0, total_out: 0, games: new Set() });
+        userMap.set(key, { games: new Set(), total_out: 0, total_in: 0 });
       }
       const user = userMap.get(key)!;
       user.total_in += row.total_in;
@@ -70,11 +44,11 @@ export const StatsService = {
     // Подготовка данных для вставки
     const usersToInsert = Array.from(userMap.entries()).map(
       ([username, data]) => ({
-        username,
-        total_in: data.total_in,
-        total_out: data.total_out,
-        games_count: data.games.size,
         game_ids: JSON.stringify(Array.from(data.games)),
+        games_count: data.games.size,
+        total_out: data.total_out,
+        total_in: data.total_in,
+        username,
       }),
     );
 
@@ -82,6 +56,32 @@ export const StatsService = {
     logger.info(
       `[StatsService] Пересчёт завершён, обработано пользователей: ${usersToInsert.length}`,
     );
+  },
+
+  getFilteredScores(chatId: number, filter?: string | "all") {
+    const f = buildFilter(filter);
+    if (f.all) {
+      return TransactionRepository.getFilteredScores(chatId);
+    }
+    if (f.year) {
+      return TransactionRepository.getFilteredScores(chatId, { year: f.year });
+    }
+    return TransactionRepository.getFilteredScores(chatId, {
+      sinceDate: f.sinceDate,
+    });
+  },
+
+  getFilteredStats(chatId: number, filter?: string | "all") {
+    const f = buildFilter(filter);
+    if (f.all) {
+      return TransactionRepository.getFilteredStats(chatId);
+    }
+    if (f.year) {
+      return TransactionRepository.getFilteredStats(chatId, { year: f.year });
+    }
+    return TransactionRepository.getFilteredStats(chatId, {
+      sinceDate: f.sinceDate,
+    });
   },
 
   getAvailableYears(chatId: number): string[] {

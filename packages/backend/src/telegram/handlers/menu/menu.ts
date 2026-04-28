@@ -20,11 +20,11 @@ export const menuHandler = async (ctx: CommandContext) => {
   const keyboard = {
     inline_keyboard: [
       [
-        { text: "📊 Статистика", callback_data: "menu_stats" },
-        { text: "🏆 Топ", callback_data: "menu_top" },
+        { callback_data: "menu_stats", text: "📊 Статистика" },
+        { callback_data: "menu_top", text: "🏆 Топ" },
       ],
       [{ text: "🃏 Web App", url: webAppUrl }],
-      [{ text: "📚 Помощь", callback_data: "menu_help" }],
+      [{ callback_data: "menu_help", text: "📚 Помощь" }],
     ],
   };
 
@@ -37,8 +37,8 @@ export const menuHandler = async (ctx: CommandContext) => {
  * Callback-обработчик для кнопок главного меню.
  * Сигнатура соответствует CallbackHandler: (ctx, match) => Promise<void>
  */
-export const menuCallback: CallbackHandler = async (ctx, match) => {
-  const data = (ctx.callbackQuery as any)?.data;
+export const menuCallback: CallbackHandler = async (ctx) => {
+  const data = (ctx.callbackQuery as { data?: string } | undefined)?.data;
 
   if (!data) {
     console.log("❌ No data in callbackQuery");

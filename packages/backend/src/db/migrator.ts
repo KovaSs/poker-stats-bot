@@ -19,7 +19,7 @@ export function runMigrations(db: Database): void {
   const applied = db
     .prepare("SELECT name FROM migrations")
     .all()
-    .map((row: any) => row.name);
+    .map((row: { name: string }) => row.name);
 
   for (const migration of migrations) {
     if (!applied.includes(migration.name)) {
@@ -31,7 +31,7 @@ export function runMigrations(db: Database): void {
         );
         logger.info(`[DB] Migration ${migration.name} applied successfully`);
       } catch (error) {
-        logger.error({ error, migration: migration.name }, "Migration failed");
+        logger.error({ migration: migration.name, error }, "Migration failed");
         throw error; // останавливаем запуск приложения
       }
     }

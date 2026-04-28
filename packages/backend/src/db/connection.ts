@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 
 import { logger } from "@/config/logger";
+
 import { runMigrations } from "./migrator";
 
 let db: Database.Database;

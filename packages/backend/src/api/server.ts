@@ -21,17 +21,10 @@ export function startApiServer() {
     res.status(404).json({ error: "Not found" });
   });
 
-  app.use(
-    (
-      err: Error,
-      req: express.Request,
-      res: express.Response,
-      next: express.NextFunction,
-    ) => {
-      logger.error({ error: err }, "API ошибка");
-      res.status(500).json({ error: "Internal server error" });
-    },
-  );
+  app.use((err: Error, _req: express.Request, res: express.Response) => {
+    logger.error({ error: err }, "API ошибка");
+    res.status(500).json({ error: "Internal server error" });
+  });
 
   app.listen(API_PORT, () => {
     logger.info({ port: API_PORT }, "API сервер запущен");

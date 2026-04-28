@@ -6,9 +6,9 @@ import { ParserService } from "./parser.service";
 
 vi.mock("@/config/logger", () => ({
   logger: {
+    error: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn(),
   },
 }));
 

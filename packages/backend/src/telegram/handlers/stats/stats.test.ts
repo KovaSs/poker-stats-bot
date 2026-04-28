@@ -1,18 +1,16 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
+
 import { StatsService } from "@/services";
+
 import * as middlewares from "../../middlewares";
-import {
-  sendStats,
-  sendTop,
-  sendStatsPeriodKeyboard,
-  sendTopPeriodKeyboard,
-} from "./stats";
+
+import { sendStatsPeriodKeyboard, sendTopPeriodKeyboard } from "./stats";
 
 vi.mock("@/services", () => ({
   StatsService: {
     getAvailableYears: vi.fn(),
-    getFilteredStats: vi.fn(),
     getFilteredScores: vi.fn(),
+    getFilteredStats: vi.fn(),
   },
 }));
 
@@ -26,9 +24,9 @@ describe("stats functions", () => {
   });
 
   it("sendStatsPeriodKeyboard отправляет клавиатуру выбора периода", async () => {
-    const ctx = {} as any;
+    const ctx = {};
     const chatId = 123;
-    (StatsService.getAvailableYears as any).mockReturnValue(["2024", "2025"]);
+    StatsService.getAvailableYears.mockReturnValue(["2024", "2025"]);
     await sendStatsPeriodKeyboard(ctx, chatId);
     expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
       ctx,
@@ -42,9 +40,9 @@ describe("stats functions", () => {
   });
 
   it("sendTopPeriodKeyboard отправляет клавиатуру выбора периода", async () => {
-    const ctx = {} as any;
+    const ctx = {};
     const chatId = 123;
-    (StatsService.getAvailableYears as any).mockReturnValue(["2024"]);
+    StatsService.getAvailableYears.mockReturnValue(["2024"]);
     await sendTopPeriodKeyboard(ctx, chatId);
     expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
       ctx,

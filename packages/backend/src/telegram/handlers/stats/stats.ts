@@ -6,14 +6,21 @@ import { logger } from "@/config/logger";
 import { replyWithAutoDelete } from "../../middlewares";
 import { escapeMarkdown } from "../common";
 
-function buildYearKeyboard(prefix: string, years: string[]): any {
+import type { InlineKeyboardButton } from "telegraf/types";
+
+function buildYearKeyboard(
+  prefix: string,
+  years: string[],
+): {
+  inline_keyboard: InlineKeyboardButton[][];
+} {
   const yearButtons = years.map((year) => ({
-    text: year,
     callback_data: `${prefix}_${year}`,
+    text: year,
   }));
 
   // Разбиваем на строки по 3 кнопки
-  const rows: any[] = [];
+  const rows: InlineKeyboardButton[][] = [];
   for (let i = 0; i < yearButtons.length; i += 3) {
     rows.push(yearButtons.slice(i, i + 3));
   }
@@ -21,8 +28,8 @@ function buildYearKeyboard(prefix: string, years: string[]): any {
   return {
     inline_keyboard: [
       [
-        { text: "📅 Всё время", callback_data: `${prefix}_all` },
-        { text: "📆 Последний год", callback_data: `${prefix}_last_year` },
+        { callback_data: `${prefix}_all`, text: "📅 Всё время" },
+        { callback_data: `${prefix}_last_year`, text: "📆 Последний год" },
       ],
       ...rows,
     ],

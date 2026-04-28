@@ -2,6 +2,7 @@ import { vi, describe, it, expect } from "vitest";
 import { Context } from "telegraf";
 
 import * as middlewares from "../../middlewares";
+
 import { sendHelpMessage } from "./help";
 
 vi.mock("../../middlewares", () => ({
@@ -13,7 +14,7 @@ describe("sendHelpMessage", () => {
     const ctx = {
       telegram: { sendMessage: vi.fn() },
       chat: { id: 123 },
-    } as any;
+    };
     await sendHelpMessage(ctx as Context, 123);
     expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
       ctx,

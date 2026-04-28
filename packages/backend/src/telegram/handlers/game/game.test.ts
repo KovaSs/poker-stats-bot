@@ -11,14 +11,14 @@ import * as game from "./game";
 
 vi.mock("@/services", () => ({
   GameService: {
-    createGame: vi.fn(),
     addTransactions: vi.fn(),
+    createGame: vi.fn(),
     updateGame: vi.fn(),
     deleteGame: vi.fn(),
   },
   ParserService: {
-    parseTransactions: vi.fn(),
     extractGameDateFromText: vi.fn(),
+    parseTransactions: vi.fn(),
   },
   StatsService: {
     recalcStats: vi.fn(),
@@ -38,28 +38,28 @@ vi.mock("../../middlewares", () => ({
 
 vi.mock("@/config/logger", () => ({
   logger: {
-    info: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
     warn: vi.fn(),
   },
 }));
 
-function createMockContext(overrides: Partial<any> = {}): any {
+function createMockContext(overrides = {}) {
   return {
-    chat: { id: 12345 },
-    from: { id: 67890, username: "testuser" },
-    message: {
-      message_id: 999,
-      text: "",
-      entities: [],
-    },
-    botInfo: { username: "testbot" },
-    reply: vi.fn(),
-    deleteMessage: vi.fn(),
     telegram: {
       editMessageText: vi.fn(),
       deleteMessage: vi.fn(),
     },
+    message: {
+      message_id: 999,
+      entities: [],
+      text: "",
+    },
+    from: { username: "testuser", id: 67890 },
+    botInfo: { username: "testbot" },
+    deleteMessage: vi.fn(),
+    chat: { id: 12345 },
+    reply: vi.fn(),
     ...overrides,
   };
 }
@@ -73,19 +73,17 @@ describe("game handlers", () => {
     it("создаёт игру по тексту с упоминанием бота и командой game", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 111,
-          text: "@testbot game 16.02.2025\nВход:\n+500 | User",
           entities: [{ type: "mention", offset: 0, length: 8 }],
+          text: "@testbot game 16.02.2025\nВход:\n+500 | User",
+          message_id: 111,
         },
       });
-      (ParserService.extractGameDateFromText as any).mockReturnValue(
-        "2025-02-16",
-      );
-      (ParserService.parseTransactions as any).mockReturnValue([
+      ParserService.extractGameDateFromText.mockReturnValue("2025-02-16");
+      ParserService.parseTransactions.mockReturnValue([
         { username: "User", amount: 500, type: "in" },
       ]);
-      (GameService.createGame as any).mockReturnValue(42);
-      (GameService.addTransactions as any).mockReturnValue(1);
+      GameService.createGame.mockReturnValue(42);
+      GameService.addTransactions.mockReturnValue(1);
 
       await game.textHandler(ctx as Context);
 
@@ -108,8 +106,8 @@ describe("game handlers", () => {
     it("игнорирует обычный текст без упоминания бота", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 222,
           text: "Вход:\n+300 | Player",
+          message_id: 222,
           entities: [],
         },
       });
@@ -125,9 +123,9 @@ describe("game handlers", () => {
     it("игнорирует сообщение с упоминанием, но без слова game", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 333,
-          text: "@testbot привет",
           entities: [{ type: "mention", offset: 0, length: 8 }],
+          text: "@testbot привет",
+          message_id: 333,
         },
       });
 
@@ -141,15 +139,13 @@ describe("game handlers", () => {
     it("отвечает сообщением об отсутствии транзакций при упоминании и game", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 444,
-          text: "@testbot game 16.02.2025\nПросто текст",
           entities: [{ type: "mention", offset: 0, length: 8 }],
+          text: "@testbot game 16.02.2025\nПросто текст",
+          message_id: 444,
         },
       });
-      (ParserService.extractGameDateFromText as any).mockReturnValue(
-        "2025-02-16",
-      );
-      (ParserService.parseTransactions as any).mockReturnValue([]);
+      ParserService.extractGameDateFromText.mockReturnValue("2025-02-16");
+      ParserService.parseTransactions.mockReturnValue([]);
 
       await game.textHandler(ctx as Context);
 
@@ -163,13 +159,13 @@ describe("game handlers", () => {
     it("обрабатывает ошибку и отправляет сообщение об ошибке", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 555,
-          text: "@testbot game 16.02.2025\nВход:\n+500 | User",
           entities: [{ type: "mention", offset: 0, length: 8 }],
+          text: "@testbot game 16.02.2025\nВход:\n+500 | User",
+          message_id: 555,
         },
       });
       const testError = new Error("Test error");
-      (ParserService.extractGameDateFromText as any).mockImplementation(() => {
+      ParserService.extractGameDateFromText.mockImplementation(() => {
         throw testError;
       });
 
@@ -190,19 +186,17 @@ describe("game handlers", () => {
     it("обрабатывает фото с подписью, содержащей упоминание бота и game", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 555,
           caption: "@testbot game 20.03.2026\nВход:\n+1000 | PhotoUser",
           caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+          message_id: 555,
         },
       });
-      (ParserService.extractGameDateFromText as any).mockReturnValue(
-        "2026-03-20",
-      );
-      (ParserService.parseTransactions as any).mockReturnValue([
+      ParserService.extractGameDateFromText.mockReturnValue("2026-03-20");
+      ParserService.parseTransactions.mockReturnValue([
         { username: "PhotoUser", amount: 1000, type: "in" },
       ]);
-      (GameService.createGame as any).mockReturnValue(77);
-      (GameService.addTransactions as any).mockReturnValue(1);
+      GameService.createGame.mockReturnValue(77);
+      GameService.addTransactions.mockReturnValue(1);
 
       await game.photoHandler(ctx as Context);
 
@@ -221,9 +215,9 @@ describe("game handlers", () => {
     it("игнорирует фото без упоминания бота", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 666,
           caption: "Просто текст",
           caption_entities: [],
+          message_id: 666,
         },
       });
 
@@ -236,9 +230,9 @@ describe("game handlers", () => {
     it("игнорирует фото с упоминанием, но без game", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 667,
-          caption: "@testbot красивое фото",
           caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+          caption: "@testbot красивое фото",
+          message_id: 667,
         },
       });
 
@@ -251,13 +245,13 @@ describe("game handlers", () => {
     it("обрабатывает ошибку и отправляет сообщение об ошибке", async () => {
       const ctx = createMockContext({
         message: {
-          message_id: 777,
           caption: "@testbot game 20.03.2026\nВход:\n+1000 | PhotoUser",
           caption_entities: [{ type: "mention", offset: 0, length: 8 }],
+          message_id: 777,
         },
       });
       const testError = new Error("Photo processing error");
-      (ParserService.extractGameDateFromText as any).mockImplementation(() => {
+      ParserService.extractGameDateFromText.mockImplementation(() => {
         throw testError;
       });
 
@@ -277,26 +271,24 @@ describe("game handlers", () => {
   describe("editedMessageHandler", () => {
     it("обновляет существующую игру", async () => {
       const gameRow = {
-        id: 10,
-        chat_id: 12345,
-        message_id: 777,
         game_date: "2026-01-01",
+        message_id: 777,
+        chat_id: 12345,
+        id: 10,
       };
-      (GameRepository.findByChatAndMessage as any).mockReturnValue(gameRow);
+      GameRepository.findByChatAndMessage.mockReturnValue(gameRow);
       const ctx = createMockContext({
         editedMessage: {
+          text: "game 15.02.2026\nВход:\n+300 | Editor",
           chat: { id: 12345 },
           message_id: 777,
-          text: "game 15.02.2026\nВход:\n+300 | Editor",
         },
       });
-      (ParserService.extractGameDateFromText as any).mockReturnValue(
-        "2026-02-15",
-      );
-      (ParserService.parseTransactions as any).mockReturnValue([
+      ParserService.extractGameDateFromText.mockReturnValue("2026-02-15");
+      ParserService.parseTransactions.mockReturnValue([
         { username: "Editor", amount: 300, type: "in" },
       ]);
-      (GameService.updateGame as any).mockReturnValue(1);
+      GameService.updateGame.mockReturnValue(1);
 
       await game.editedMessageHandler(ctx as Context);
 
@@ -310,23 +302,21 @@ describe("game handlers", () => {
     });
 
     it("создаёт новую игру при упоминании бота и game", async () => {
-      (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
+      GameRepository.findByChatAndMessage.mockReturnValue(null);
       const ctx = createMockContext({
         editedMessage: {
-          chat: { id: 12345 },
-          message_id: 888,
           text: "@testbot game 16.02.2025\nВход:\n+400 | NewUser",
           entities: [{ type: "mention", offset: 0, length: 8 }],
+          chat: { id: 12345 },
+          message_id: 888,
         },
       });
-      (ParserService.parseTransactions as any).mockReturnValue([
+      ParserService.parseTransactions.mockReturnValue([
         { username: "NewUser", amount: 400, type: "in" },
       ]);
-      (ParserService.extractGameDateFromText as any).mockReturnValue(
-        "2025-02-16",
-      );
-      (GameService.createGame as any).mockReturnValue(11);
-      (GameService.addTransactions as any).mockReturnValue(1);
+      ParserService.extractGameDateFromText.mockReturnValue("2025-02-16");
+      GameService.createGame.mockReturnValue(11);
+      GameService.addTransactions.mockReturnValue(1);
 
       await game.editedMessageHandler(ctx as Context);
 
@@ -346,12 +336,12 @@ describe("game handlers", () => {
     });
 
     it("игнорирует редактирование без упоминания бота (не plain data)", async () => {
-      (GameRepository.findByChatAndMessage as any).mockReturnValue(null);
+      GameRepository.findByChatAndMessage.mockReturnValue(null);
       const ctx = createMockContext({
         editedMessage: {
+          text: "Вход:\n+300 | NoMention",
           chat: { id: 12345 },
           message_id: 999,
-          text: "Вход:\n+300 | NoMention",
           entities: [],
         },
       });
@@ -365,14 +355,14 @@ describe("game handlers", () => {
     it("обрабатывает ошибку и отправляет сообщение об ошибке", async () => {
       const ctx = createMockContext({
         editedMessage: {
-          chat: { id: 12345 },
-          message_id: 1000,
           text: "@testbot game 15.02.2026\nВход:\n+300 | Editor",
           entities: [{ type: "mention", offset: 0, length: 8 }],
+          chat: { id: 12345 },
+          message_id: 1000,
         },
       });
       const testError = new Error("Edit processing error");
-      (GameRepository.findByChatAndMessage as any).mockImplementation(() => {
+      GameRepository.findByChatAndMessage.mockImplementation(() => {
         throw testError;
       });
 

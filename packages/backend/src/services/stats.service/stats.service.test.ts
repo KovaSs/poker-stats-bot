@@ -38,7 +38,7 @@ describe("StatsService", () => {
         game_ids TEXT DEFAULT '[]'
       );
     `);
-    (getDB as any).mockReturnValue(testDB);
+    getDB.mockReturnValue(testDB);
   });
 
   it("получает статистику за конкретный год", () => {

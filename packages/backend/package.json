@@ -9,7 +9,9 @@
     "test": "vitest run",
     "test:unit": "vitest",
     "test:coverage": "vitest --coverage",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix"
   },
   "dependencies": {
     "@tma.js/init-data-node": "^2.0.7",

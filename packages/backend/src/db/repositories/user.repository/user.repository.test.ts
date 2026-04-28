@@ -24,7 +24,7 @@ describe("UserRepository", () => {
         game_ids TEXT DEFAULT '[]'
       )
     `);
-    (getDB as any).mockReturnValue(testDB);
+    getDB.mockReturnValue(testDB);
   });
 
   describe("findByUsername", () => {
@@ -42,11 +42,11 @@ describe("UserRepository", () => {
       expect(user).not.toBeNull();
       expect(user).toMatchObject({
         username: "user1",
+        game_ids: "[1,2]",
         telegram_id: 123,
+        games_count: 2,
         total_in: 100,
         total_out: 50,
-        games_count: 2,
-        game_ids: "[1,2]",
       });
     });
 
@@ -83,22 +83,22 @@ describe("UserRepository", () => {
       UserRepository.upsert({
         username: "newuser",
         telegram_id: 999,
+        game_ids: "[5]",
+        games_count: 1,
         total_in: 10,
         total_out: 5,
-        games_count: 1,
-        game_ids: "[5]",
       });
 
       const user = testDB
         .prepare(`SELECT * FROM users WHERE username = ?`)
-        .get("newuser") as any;
+        .get("newuser");
       expect(user).toMatchObject({
         username: "newuser",
         telegram_id: 999,
+        game_ids: "[5]",
+        games_count: 1,
         total_in: 10,
         total_out: 5,
-        games_count: 1,
-        game_ids: "[5]",
       });
     });
 
@@ -116,23 +116,23 @@ describe("UserRepository", () => {
       // Обновляем
       UserRepository.upsert({
         username: "existing",
-        telegram_id: 222, // telegram_id обновится
-        total_in: 30,
-        total_out: 15,
-        games_count: 3,
         game_ids: "[1,2,3]", // явно передаём новый game_ids
+        telegram_id: 222, // telegram_id обновится
+        games_count: 3,
+        total_out: 15,
+        total_in: 30,
       });
 
       const user = testDB
         .prepare(`SELECT * FROM users WHERE username = ?`)
-        .get("existing") as any;
+        .get("existing");
       expect(user).toMatchObject({
         username: "existing",
-        telegram_id: 222,
-        total_in: 30,
-        total_out: 15,
-        games_count: 3,
         game_ids: "[1,2,3]",
+        telegram_id: 222,
+        games_count: 3,
+        total_out: 15,
+        total_in: 30,
       });
     });
 
@@ -150,14 +150,14 @@ describe("UserRepository", () => {
       // Обновляем без game_ids
       UserRepository.upsert({
         username: "existing",
-        total_in: 30,
-        total_out: 15,
         games_count: 3,
+        total_out: 15,
+        total_in: 30,
       });
 
       const user = testDB
         .prepare(`SELECT * FROM users WHERE username = ?`)
-        .get("existing") as any;
+        .get("existing");
       expect(user.game_ids).toBe("[1,2]"); // остались старые
       expect(user.total_in).toBe(30);
       expect(user.total_out).toBe(15);
@@ -193,18 +193,18 @@ describe("UserRepository", () => {
     it("вставляет несколько пользователей одной транзакцией", () => {
       const users = [
         {
-          username: "a",
-          total_in: 1,
-          total_out: 2,
           games_count: 1,
           game_ids: "[]",
+          username: "a",
+          total_out: 2,
+          total_in: 1,
         },
         {
-          username: "b",
-          total_in: 3,
-          total_out: 4,
           games_count: 1,
           game_ids: "[]",
+          username: "b",
+          total_out: 4,
+          total_in: 3,
         },
       ];
       UserRepository.insertMany(users);
@@ -213,7 +213,7 @@ describe("UserRepository", () => {
         .prepare(
           `SELECT username, total_in, total_out FROM users ORDER BY username`,
         )
-        .all() as any[];
+        .all();
       expect(all).toHaveLength(2);
       expect(all[0].username).toBe("a");
       expect(all[0].total_in).toBe(1);

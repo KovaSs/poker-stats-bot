@@ -22,9 +22,9 @@ describe("GET /stats", () => {
 
   it("возвращает статистику без фильтра", async () => {
     const mockStats = [
-      { username: "user1", total_in: 100, total_out: 200, games_count: 1 },
+      { username: "user1", total_out: 200, games_count: 1, total_in: 100 },
     ];
-    (StatsService.getFilteredStats as any).mockReturnValue(mockStats);
+    StatsService.getFilteredStats.mockReturnValue(mockStats);
 
     const res = await request(app).get("/stats?chatId=123");
     expect(res.status).toBe(200);
@@ -38,7 +38,7 @@ describe("GET /stats", () => {
   });
 
   it("обрабатывает ошибки сервиса", async () => {
-    (StatsService.getFilteredStats as any).mockImplementation(() => {
+    StatsService.getFilteredStats.mockImplementation(() => {
       throw new Error("DB error");
     });
     const res = await request(app).get("/stats?chatId=123");

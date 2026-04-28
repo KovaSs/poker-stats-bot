@@ -8,7 +8,7 @@ import { errorHandler } from "./middlewares";
 import * as handlers from "./handlers";
 
 export function setupBot(token: string, apiRoot?: string) {
-  const options: any = {};
+  const options: { telegram?: { apiRoot: string } } = {};
   if (apiRoot) {
     options.telegram = { apiRoot };
   }

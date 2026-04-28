@@ -1,27 +1,15 @@
 import { logger } from "@/config/logger";
-
 import { getDB } from "@/db/connection";
 
 export interface GameRow {
-  id: number;
-  chat_id: number;
   message_id: number | null;
   game_date: string | null;
   created_at: string;
+  chat_id: number;
+  id: number;
 }
 
 export const GameRepository = {
-  create(chatId: number, messageId: number | null, gameDate?: string): number {
-    const stmt = getDB().prepare(
-      `INSERT INTO games (chat_id, message_id, game_date) VALUES (?, ?, ?)`,
-    );
-    const info = stmt.run(chatId, messageId, gameDate || null);
-    logger.info(
-      `[DB] createGame успешно, lastID: ${info.lastInsertRowid}, дата: ${gameDate || "не указана"}`,
-    );
-    return Number(info.lastInsertRowid);
-  },
-
   findByChatAndMessage(chatId: number, messageId: number): GameRow | null {
     const stmt = getDB().prepare(
       `SELECT * FROM games WHERE chat_id = ? AND message_id = ?`,
@@ -38,6 +26,17 @@ export const GameRepository = {
       );
     }
     return null;
+  },
+
+  create(chatId: number, messageId: number | null, gameDate?: string): number {
+    const stmt = getDB().prepare(
+      `INSERT INTO games (chat_id, message_id, game_date) VALUES (?, ?, ?)`,
+    );
+    const info = stmt.run(chatId, messageId, gameDate || null);
+    logger.info(
+      `[DB] createGame успешно, lastID: ${info.lastInsertRowid}, дата: ${gameDate || "не указана"}`,
+    );
+    return Number(info.lastInsertRowid);
   },
 
   updateDate(id: number, gameDate: string): void {

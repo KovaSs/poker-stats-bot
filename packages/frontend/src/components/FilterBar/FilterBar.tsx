@@ -26,9 +26,9 @@ export const FilterBar = ({
   chatId,
 }: FilterBarProps) => {
   const { data: years = [] } = useQuery<string[]>({
-    queryKey: ["years", chatId],
     queryFn: () => fetchYears(chatId, initDataRaw),
     enabled: !!chatId && !!initDataRaw,
+    queryKey: ["years", chatId],
   });
 
   const isActive = (filter: string | undefined) => currentFilter === filter;

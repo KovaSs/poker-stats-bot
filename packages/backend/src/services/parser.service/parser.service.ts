@@ -1,17 +1,16 @@
 import { logger } from "@/config/logger";
 
 export interface ParsedTransaction {
+  type: "in" | "out";
   username: string;
   amount: number;
-  type: "in" | "out";
 }
 
 function sanitizeUsername(username: string): string | null {
-  // Удаляем управляющие символы
+  // eslint-disable-next-line no-control-regex
   let cleaned = username.replace(/[\x00-\x1F\x7F]/g, "");
   cleaned = cleaned.trim();
   if (cleaned.length === 0) return null;
-  // Ограничиваем длину
   if (cleaned.length > 50) cleaned = cleaned.substring(0, 50);
   return cleaned;
 }
@@ -33,7 +32,7 @@ export const ParserService = {
 
       if (!currentType) continue;
 
-      const match = trimmed.match(/^\+(\d+)\s*\|\s*([^\/\n]+)/);
+      const match = trimmed.match(/^\+(\d+)\s*\|\s*([^/\n]+)/);
       if (match) {
         const points = parseInt(match[1], 10);
         let username = match[2].trim();
@@ -46,8 +45,8 @@ export const ParserService = {
           if (sanitized) {
             transactions.push({
               username: sanitized,
-              amount: points,
               type: currentType,
+              amount: points,
             });
           } else {
             logger.warn(
