@@ -30,7 +30,7 @@ export const TransactionRepository = {
       JOIN games g ON t.game_id = g.id
       WHERE g.chat_id = ?
     `;
-    const params: string[] = [chatId];
+    const params: (string | number)[] = [chatId];
 
     if (filter?.year) {
       sql += ` AND g.game_date LIKE ?`;
@@ -66,7 +66,7 @@ export const TransactionRepository = {
       JOIN games g ON t.game_id = g.id
       WHERE g.chat_id = ?
     `;
-    const params: string[] = [chatId];
+    const params: (string | number)[] = [chatId];
 
     if (filter?.year) {
       sql += ` AND g.game_date LIKE ?`;
@@ -82,7 +82,7 @@ export const TransactionRepository = {
     const rows = stmt.all(...params) as {
       username: string;
       score: number;
-    };
+    }[];
     logger.info(`[DB] getFilteredScores: получено ${rows.length} записей`);
     return rows;
   },

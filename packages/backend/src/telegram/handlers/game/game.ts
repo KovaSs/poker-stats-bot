@@ -9,6 +9,7 @@ import { deleteCommandMessage, replyWithAutoDelete } from "../../middlewares";
 type TelegramMessage = {
   caption_entities?: { type: string; offset: number; length: number }[];
   entities?: { type: string; offset: number; length: number }[];
+  chat?: { id: number };
   message_id: number;
   caption?: string;
   text?: string;
@@ -154,7 +155,10 @@ export const editedMessageHandler = async (ctx: Context) => {
     const editedMessage = ctx.editedMessage as TelegramMessage;
     if (!editedMessage) return;
 
-    const chatId = editedMessage.chat.id;
+    const chatId = editedMessage.chat?.id;
+
+    if (!chatId) return;
+
     const messageId = editedMessage.message_id;
     const text = editedMessage.text || editedMessage.caption || "";
     const entities =

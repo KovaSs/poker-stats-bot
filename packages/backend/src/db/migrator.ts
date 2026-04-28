@@ -16,10 +16,9 @@ function ensureMigrationsTable(db: Database): void {
 export function runMigrations(db: Database): void {
   ensureMigrationsTable(db);
 
-  const applied = db
-    .prepare("SELECT name FROM migrations")
-    .all()
-    .map((row: { name: string }) => row.name);
+  const applied = (
+    db.prepare("SELECT name FROM migrations").all() as { name: string }[]
+  ).map((row) => row.name);
 
   for (const migration of migrations) {
     if (!applied.includes(migration.name)) {

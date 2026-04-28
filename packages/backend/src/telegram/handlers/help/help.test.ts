@@ -15,7 +15,7 @@ describe("sendHelpMessage", () => {
       telegram: { sendMessage: vi.fn() },
       chat: { id: 123 },
     };
-    await sendHelpMessage(ctx as Context, 123);
+    await sendHelpMessage(ctx as Context);
     expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
       ctx,
       expect.stringContaining("📚 **Список доступных команд:**"),

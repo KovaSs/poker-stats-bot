@@ -62,7 +62,7 @@ export const menuCallback: CallbackHandler = async (ctx) => {
         await sendTopPeriodKeyboard(ctx, chatId);
         break;
       case "menu_help":
-        await sendHelpMessage(ctx, chatId);
+        await sendHelpMessage(ctx);
         break;
       default:
         console.log("⚠️ Unknown menu callback:", data);
