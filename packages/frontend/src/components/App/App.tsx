@@ -33,8 +33,8 @@ const fetchStats = (
 
 export const App = () => {
   const lp = useLaunchParams();
-  // В реальном проекте используйте useInitData().raw() из SDK, здесь оставлено как есть
-  const initDataRaw = lp.tgWebAppData as string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const initDataRaw = (lp as any).tgWebAppData as string;
   const startParam = lp.tgWebAppStartParam ?? "";
   const chatId = startParam.startsWith("chat_")
     ? Number(startParam.slice(5))
