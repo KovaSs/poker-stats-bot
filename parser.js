@@ -1,6 +1,6 @@
-const fs = require("fs").promises;
-const path = require("path");
-const crypto = require("crypto");
+import { promises as fs, createReadStream } from "fs";
+import path from "path";
+import crypto from "crypto";
 
 // ----------------------------------------------------------------------
 // Фиксированные настройки (без параметров командной строки)
@@ -292,7 +292,7 @@ async function readFileContent(filePath) {
 }
 
 // ----------------------------------------------------------------------
-// Генерация дерева каталогов (теперь на основе всех путей – и папок, и файлов)
+// Генерация дерева каталогов
 // ----------------------------------------------------------------------
 
 function generateTree(entries, baseDir) {
@@ -308,20 +308,16 @@ function generateTree(entries, baseDir) {
       const isLast = i === parts.length - 1;
 
       if (!isLast) {
-        // промежуточная директория – создаём, если ещё нет
         if (!current.children[part]) {
           current.children[part] = { name: part, children: {}, files: [] };
         }
         current = current.children[part];
       } else {
-        // последний элемент – файл или директория
         if (entry.isDirectory) {
-          // если это папка, создаём узел (даже если она пуста)
           if (!current.children[part]) {
             current.children[part] = { name: part, children: {}, files: [] };
           }
         } else {
-          // это файл
           current.files.push(part);
         }
       }
@@ -364,7 +360,6 @@ async function main() {
   console.log(`Сканирование директории: ${startDir}`);
 
   const entries = await walk(startDir);
-  // сортируем пути для стабильности (не обязательно, но красиво)
   entries.sort((a, b) => a.path.localeCompare(b.path));
 
   const filePaths = entries.filter((e) => !e.isDirectory).map((e) => e.path);
@@ -382,8 +377,7 @@ async function main() {
   let skippedBinaryLarge = 0;
   let failedFiles = 0;
 
-  for (let i = 0; i < filePaths.length; i++) {
-    const filePath = filePaths[i];
+  for (const filePath of filePaths) {
     const relativePath = path.relative(startDir, filePath);
 
     let fileData;
@@ -406,7 +400,6 @@ async function main() {
       skippedBinaryLarge++;
     }
 
-    // Якорь для оглавления
     const anchor = relativePath
       .replace(/[^a-zA-Z0-9\-_/]/g, "_")
       .replace(/\//g, "-");
@@ -420,7 +413,6 @@ async function main() {
     } else if (fileData.type === "binary") {
       block += ` (base64, size: ${fileData.stats.size}, mtime: ${fileData.stats.mtime.toISOString()}, md5: ${fileData.hash})\n\n\`\`\`\n${fileData.content}\n\`\`\``;
     } else {
-      // binary-meta
       block += ` (meta only, size: ${fileData.stats.size}, mtime: ${fileData.stats.mtime.toISOString()}, md5: ${fileData.hash})\n\n\`\`\`\`\`\``;
     }
 

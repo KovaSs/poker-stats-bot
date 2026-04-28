@@ -1,22 +1,20 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-  CircularProgress,
-  Paper,
-  Alert,
-} from "@mui/material";
+import { Tab, Tabs, Typography, CircularProgress, Alert } from "@mui/material";
 import { useLaunchParams } from "@telegram-apps/sdk-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { StatsTable } from "../StatsTable";
 import { FilterBar } from "../FilterBar";
+import { TopList } from "../TopList";
 
 import styles from "./styles.module.scss";
+
+interface UserStats {
+  games_count: number;
+  total_out: number;
+  username: string;
+  total_in: number;
+}
 
 const fetchStats = (
   chatId: number,
@@ -33,26 +31,20 @@ const fetchStats = (
   });
 };
 
-interface UserStats {
-  games_count: number;
-  total_out: number;
-  username: string;
-  total_in: number;
-}
-
 export const App = () => {
   const lp = useLaunchParams();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const initDataRaw = (lp as any).tgWebAppData as string;
+  // В реальном проекте используйте useInitData().raw() из SDK, здесь оставлено как есть
+  const initDataRaw = lp.tgWebAppData as string;
   const startParam = lp.tgWebAppStartParam ?? "";
   const chatId = startParam.startsWith("chat_")
     ? Number(startParam.slice(5))
     : undefined;
 
   const [filter, setFilter] = useState<string | undefined>(undefined);
+  const [tab, setTab] = useState(0); // 0 - Статистика, 1 - Топ
 
   const {
-    data: stats,
+    data: stats = [] as UserStats[],
     isLoading,
     error,
   } = useQuery({
@@ -63,9 +55,19 @@ export const App = () => {
 
   return (
     <div className={styles.container}>
-      <Typography variant="h5" gutterBottom>
-        📊 Статистика
+      <Typography variant="h5" gutterBottom sx={{ textAlign: "center" }}>
+        📊 Покерная статистика
       </Typography>
+
+      <Tabs
+        onChange={(_, newValue) => setTab(newValue)}
+        sx={{ mb: 2 }}
+        value={tab}
+        centered
+      >
+        <Tab label="Статистика" />
+        <Tab label="Топ" />
+      </Tabs>
 
       {chatId && initDataRaw && (
         <FilterBar
@@ -78,48 +80,17 @@ export const App = () => {
 
       {isLoading && <CircularProgress />}
       {error && <Alert severity="error">Ошибка: {error.message}</Alert>}
-      {stats && stats.length === 0 && <Typography>Нет данных</Typography>}
 
-      {stats && stats.length > 0 && (
-        <TableContainer
-          component={Paper}
-          sx={{ maxWidth: "100%", borderRadius: 2 }}
-        >
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>№</TableCell>
-                <TableCell>Игрок</TableCell>
-                <TableCell align="right">Игр</TableCell>
-                <TableCell align="right">Вход</TableCell>
-                <TableCell align="right">Выход</TableCell>
-                <TableCell align="right">Баланс</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {stats.map((u: UserStats, i: number) => {
-                const balance = u.total_out - u.total_in;
-                const sign = balance >= 0 ? "+" : "";
-                return (
-                  <TableRow key={u.username} hover>
-                    <TableCell>{i + 1}</TableCell>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell align="right">{u.games_count}</TableCell>
-                    <TableCell align="right">{u.total_in}</TableCell>
-                    <TableCell align="right">{u.total_out}</TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ color: balance >= 0 ? "#4caf50" : "#f44336" }}
-                    >
-                      {sign}
-                      {balance}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      {!isLoading && !error && stats.length === 0 && (
+        <Typography>Нет данных</Typography>
+      )}
+
+      {!isLoading && !error && stats.length > 0 && tab === 0 && (
+        <StatsTable stats={stats} />
+      )}
+
+      {!isLoading && !error && stats.length > 0 && tab === 1 && (
+        <TopList stats={stats} />
       )}
 
       <div className={styles.chatIdFooter}>
@@ -128,5 +99,3 @@ export const App = () => {
     </div>
   );
 };
-
-export default App;

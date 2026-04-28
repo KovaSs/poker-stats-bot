@@ -15,7 +15,7 @@ import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./components";
+import { App, ErrorBoundary } from "./components";
 
 initSDK();
 initData.restore();
@@ -98,7 +98,9 @@ const AppWithTheme = () => {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AppWithTheme />
+      <ErrorBoundary>
+        <AppWithTheme />
+      </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>,
 );
