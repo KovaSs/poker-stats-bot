@@ -1,6 +1,8 @@
 import { Context } from "telegraf";
 
+import { GameRepository } from "@/db/repositories";
 import { processGameMessage } from "@/core";
+import { container } from "@/di/container";
 import { logger } from "@/config/logger";
 
 import { deleteCommandMessage, replyWithAutoDelete } from "../../middlewares";
@@ -70,7 +72,11 @@ export const textHandler = async (ctx: Context) => {
     const result = await processGameMessage(imessage);
 
     if (result.reply) {
-      await replyWithAutoDelete(ctx, result.reply);
+      const sent = await replyWithAutoDelete(ctx, result.reply);
+      if (result.gameId && sent) {
+        const gameRepo = container.resolve(GameRepository);
+        gameRepo.updateTelegramBotMessageId(result.gameId, sent.message_id);
+      }
     }
   } catch (error) {
     logger.error(`[ERROR] textHandler: ${JSON.stringify(error, null, 2)}`);
@@ -104,7 +110,11 @@ export const photoHandler = async (ctx: Context) => {
     const result = await processGameMessage(imessage);
 
     if (result.reply) {
-      await replyWithAutoDelete(ctx, result.reply);
+      const sent = await replyWithAutoDelete(ctx, result.reply);
+      if (result.gameId && sent) {
+        const gameRepo = container.resolve(GameRepository);
+        gameRepo.updateTelegramBotMessageId(result.gameId, sent.message_id);
+      }
     }
   } catch (error) {
     logger.error(`[ERROR] photoHandler: ${JSON.stringify(error, null, 2)}`);
@@ -146,7 +156,11 @@ export const editedMessageHandler = async (ctx: Context) => {
     if (!mentioned && result.reply === null) return;
 
     if (result.reply) {
-      await replyWithAutoDelete(ctx, result.reply);
+      const sent = await replyWithAutoDelete(ctx, result.reply);
+      if (result.gameId && sent) {
+        const gameRepo = container.resolve(GameRepository);
+        gameRepo.updateTelegramBotMessageId(result.gameId, sent.message_id);
+      }
     }
   } catch (error) {
     logger.error(

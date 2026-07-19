@@ -3,10 +3,10 @@ import { Button } from "@mui/material";
 
 import styles from "./styles.module.scss";
 
-const fetchYears = (chatId: number, initDataRaw: string) => {
-  const headers: HeadersInit = {};
-  if (initDataRaw) headers["Authorization"] = `tma ${initDataRaw}`;
-  return fetch(`/api/years?chatId=${chatId}`, { headers }).then((res) => {
+const fetchYears = (token: string | null) => {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch("/api/years", { headers }).then((res) => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   });
@@ -15,45 +15,30 @@ const fetchYears = (chatId: number, initDataRaw: string) => {
 interface FilterBarProps {
   onFilterChange: (filter: string | undefined) => void;
   currentFilter: string | undefined;
-  initDataRaw: string;
-  chatId: number;
+  token: string | null;
 }
 
-export const FilterBar = ({
-  onFilterChange,
-  currentFilter,
-  initDataRaw,
-  chatId,
-}: FilterBarProps) => {
+export const FilterBar = ({ onFilterChange, currentFilter, token }: FilterBarProps) => {
   const { data: years = [] } = useQuery<string[]>({
-    queryFn: () => fetchYears(chatId, initDataRaw),
-    enabled: !!chatId && !!initDataRaw,
-    queryKey: ["years", chatId],
+    queryFn: () => fetchYears(token),
+    queryKey: ["years"],
   });
 
-  const isActive = (filter: string | undefined) => currentFilter === filter;
+  const buttons = [
+    { filter: "all" as const, label: "Всё время" },
+    { filter: undefined as string | undefined, label: "Последний год" },
+    ...years.map((year) => ({ filter: year, label: year })),
+  ];
 
   return (
     <div className={styles.filterContainer}>
-      <Button
-        variant={isActive("all") ? "contained" : "outlined"}
-        onClick={() => onFilterChange("all")}
-      >
-        Всё время
-      </Button>
-      <Button
-        variant={currentFilter === undefined ? "contained" : "outlined"}
-        onClick={() => onFilterChange(undefined)}
-      >
-        Последний год
-      </Button>
-      {years.map((year) => (
+      {buttons.map(({ filter, label }) => (
         <Button
-          key={year}
-          variant={currentFilter === year ? "contained" : "outlined"}
-          onClick={() => onFilterChange(year)}
+          key={label}
+          variant={currentFilter === filter ? "contained" : "outlined"}
+          onClick={() => onFilterChange(filter)}
         >
-          {year}
+          {label}
         </Button>
       ))}
     </div>

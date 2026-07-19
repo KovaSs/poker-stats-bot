@@ -36,10 +36,12 @@ describe("GET /years", () => {
     expect(mockStatsService.getAvailableYears).toHaveBeenCalledWith(123, "vk");
   });
 
-  it("возвращает 400 если chatId отсутствует", async () => {
+  it("возвращает годы без chatId (глобально)", async () => {
+    mockStatsService.getAvailableYears.mockReturnValue(["2024", "2025"]);
     const res = await request(app).get("/years");
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: "chatId is required" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(["2024", "2025"]);
+    expect(mockStatsService.getAvailableYears).toHaveBeenCalledWith(undefined, undefined);
   });
 
   it("возвращает 400 при невалидном chatId", async () => {

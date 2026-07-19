@@ -1,0 +1,2 @@
+export { useVkLogin } from "./LoginPage";
+

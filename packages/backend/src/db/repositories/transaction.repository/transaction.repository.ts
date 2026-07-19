@@ -12,12 +12,28 @@ export interface TransactionRow {
   id: number;
 }
 
+const SORT_COLUMNS: Record<string, string> = {
+  balance: "(total_out - total_in)",
+  games_count: "games_count",
+  total_out: "total_out",
+  total_in: "total_in",
+};
+
+function buildSort(sort?: string, order?: string): string {
+  if (!sort) return "";
+  const column = SORT_COLUMNS[sort];
+  if (!column) return "";
+  const dir = order === "asc" ? "ASC" : "DESC";
+  return ` ORDER BY ${column} ${dir}`;
+}
+
 function buildParams(
   chatId?: number,
-  filter?: { year?: string; sinceDate?: string; platform?: string },
-): { sql: string; params: (string | number)[] } {
+  filter?: { year?: string; sinceDate?: string; platform?: string; sort?: string; order?: string },
+): { sql: string; params: (string | number)[]; orderBy: string } {
   const params: (string | number)[] = [];
   let sql = "";
+  const orderBy = buildSort(filter?.sort, filter?.order);
 
   if (chatId !== undefined) {
     sql += ` AND g.chat_id = ?`;
@@ -37,35 +53,40 @@ function buildParams(
     params.push(filter.platform);
   }
 
-  return { params, sql };
+  return { orderBy, params, sql };
 }
 
 @injectable()
 export class TransactionRepository {
   getFilteredStats(
     chatId?: number,
-    filter?: { year?: string; sinceDate?: string; platform?: string },
+    filter?: { year?: string; sinceDate?: string; platform?: string; sort?: string; order?: string },
   ): {
     username: string;
     total_in: number;
     total_out: number;
     games_count: number;
   }[] {
-    const { sql: filterSql, params } = buildParams(chatId, filter);
+    const { sql: filterSql, orderBy, params } = buildParams(chatId, filter);
+    const finalOrder = orderBy || " ORDER BY (total_out - total_in) DESC";
     const sql = `
       SELECT
         t.username,
+        COALESCE(gu.name, t.username) as name,
         COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0) as total_in,
         COALESCE(SUM(CASE WHEN t.type = 'out' THEN t.amount ELSE 0 END), 0) as total_out,
-        COUNT(DISTINCT t.game_id) as games_count
+        COUNT(DISTINCT g.game_date) as games_count
       FROM transactions t
       JOIN games g ON t.game_id = g.id
+      LEFT JOIN user_identities ui ON ui.username = t.username AND ui.platform = g.platform AND ui.chat_id = g.chat_id
+      LEFT JOIN global_users gu ON gu.id = ui.global_user_id
       WHERE 1=1${filterSql}
-      GROUP BY t.username ORDER BY (total_out - total_in) DESC
+      GROUP BY COALESCE(gu.id, t.username)${finalOrder}
     `;
 
     const stmt = getDB().prepare(sql);
     const rows = stmt.all(...params) as {
+      name: string;
       games_count: number;
       total_out: number;
       username: string;
@@ -77,9 +98,10 @@ export class TransactionRepository {
 
   getFilteredScores(
     chatId?: number,
-    filter?: { year?: string; sinceDate?: string; platform?: string },
+    filter?: { year?: string; sinceDate?: string; platform?: string; sort?: string; order?: string },
   ): { username: string; score: number }[] {
-    const { sql: filterSql, params } = buildParams(chatId, filter);
+    const { sql: filterSql, orderBy, params } = buildParams(chatId, filter);
+    const finalOrder = orderBy || " ORDER BY score DESC";
     const sql = `
       SELECT
         t.username,
@@ -88,7 +110,7 @@ export class TransactionRepository {
       FROM transactions t
       JOIN games g ON t.game_id = g.id
       WHERE 1=1${filterSql}
-      GROUP BY t.username ORDER BY score DESC
+      GROUP BY t.username${finalOrder}
     `;
 
     const stmt = getDB().prepare(sql);
@@ -98,6 +120,98 @@ export class TransactionRepository {
     }[];
     logger.info(`[DB] getFilteredScores: получено ${rows.length} записей`);
     return rows;
+  }
+
+  getFilteredStatsByGlobalUserId(
+    globalUserId: number,
+    filter?: { year?: string; sinceDate?: string; platform?: string; sort?: string; order?: string },
+  ): {
+    username: string;
+    total_in: number;
+    total_out: number;
+    games_count: number;
+  }[] {
+    let filterSql = "";
+    const params: (string | number)[] = [globalUserId];
+    const orderBy = buildSort(filter?.sort, filter?.order);
+
+    if (filter?.year) {
+      filterSql += ` AND g.game_date LIKE ?`;
+      params.push(`${filter.year}%`);
+    } else if (filter?.sinceDate) {
+      filterSql += ` AND g.game_date >= ?`;
+      params.push(filter.sinceDate);
+    }
+
+    if (filter?.platform) {
+      filterSql += ` AND g.platform = ?`;
+      params.push(filter.platform);
+    }
+
+    const finalOrder = orderBy || " ORDER BY (total_out - total_in) DESC";
+
+    const sql = `
+      SELECT
+        ui.username,
+        COALESCE(gu.name, ui.username) as name,
+        COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0) as total_in,
+        COALESCE(SUM(CASE WHEN t.type = 'out' THEN t.amount ELSE 0 END), 0) as total_out,
+        COUNT(DISTINCT g.game_date) as games_count
+      FROM transactions t
+      JOIN games g ON t.game_id = g.id
+      JOIN user_identities ui ON ui.username = t.username AND ui.platform = g.platform AND ui.chat_id = g.chat_id
+      LEFT JOIN global_users gu ON gu.id = ui.global_user_id
+      WHERE ui.global_user_id = ?${filterSql}
+      GROUP BY ui.global_user_id${finalOrder}
+    `;
+
+    const stmt = getDB().prepare(sql);
+    return stmt.all(...params) as {
+      name: string;
+      games_count: number;
+      total_out: number;
+      username: string;
+      total_in: number;
+    }[];
+  }
+
+  getFilteredScoresByGlobalUserId(
+    globalUserId: number,
+    filter?: { year?: string; sinceDate?: string; platform?: string; sort?: string; order?: string },
+  ): { username: string; score: number }[] {
+    let filterSql = "";
+    const params: (string | number)[] = [globalUserId];
+    const orderBy = buildSort(filter?.sort, filter?.order);
+
+    if (filter?.year) {
+      filterSql += ` AND g.game_date LIKE ?`;
+      params.push(`${filter.year}%`);
+    } else if (filter?.sinceDate) {
+      filterSql += ` AND g.game_date >= ?`;
+      params.push(filter.sinceDate);
+    }
+
+    if (filter?.platform) {
+      filterSql += ` AND g.platform = ?`;
+      params.push(filter.platform);
+    }
+
+    const finalOrder = orderBy || " ORDER BY score DESC";
+
+    const sql = `
+      SELECT
+        ui.username,
+        (COALESCE(SUM(CASE WHEN t.type = 'out' THEN t.amount ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0)) as score
+      FROM transactions t
+      JOIN games g ON t.game_id = g.id
+      JOIN user_identities ui ON ui.username = t.username AND ui.platform = g.platform AND ui.chat_id = g.chat_id
+      WHERE ui.global_user_id = ?${filterSql}
+      GROUP BY ui.username${finalOrder}
+    `;
+
+    const stmt = getDB().prepare(sql);
+    return stmt.all(...params) as { username: string; score: number }[];
   }
 
   getDistinctYears(chatId?: number, platform?: string): string[] {

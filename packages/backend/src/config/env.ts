@@ -47,6 +47,11 @@ export const VK_COMMUNITY_CHAT_ID = process.env.VK_COMMUNITY_CHAT_ID
   ? Number(process.env.VK_COMMUNITY_CHAT_ID)
   : null;
 
+export const JWT_SECRET = process.env.JWT_SECRET || "poker-stats-dev-secret-change-in-production";
+
+export const VK_CLIENT_ID = process.env.VK_CLIENT_ID || "";
+export const VK_CLIENT_SECRET = process.env.VK_CLIENT_SECRET || "";
+
 if (!BOT_TOKEN) {
   logger.error(
     `❌ BOT_TOKEN не задан. Проверьте файл ${path.basename(envPath)} в корне проекта или переменные окружения.`,

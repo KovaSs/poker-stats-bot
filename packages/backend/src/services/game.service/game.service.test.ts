@@ -9,6 +9,7 @@ describe("GameService", () => {
     deleteByChatAndMessage: vi.fn(),
     findByChatAndMessage: vi.fn(),
     updateDate: vi.fn(),
+    findById: vi.fn(),
     create: vi.fn(),
     delete: vi.fn(),
   };
@@ -18,6 +19,16 @@ describe("GameService", () => {
     add: vi.fn(),
   };
 
+  const mockGlobalUserRepo = {
+    create: vi.fn().mockReturnValue(1),
+    findByVkId: vi.fn(),
+  };
+
+  const mockUserIdentityRepo = {
+    findByPlatformAndChat: vi.fn(),
+    create: vi.fn(),
+  };
+
   const mockStatsSvc = {
     recalcStats: vi.fn(),
   };
@@ -25,6 +36,8 @@ describe("GameService", () => {
   const gameService = new GameService(
     mockGameRepo as never,
     mockTxRepo as never,
+    mockGlobalUserRepo as never,
+    mockUserIdentityRepo as never,
     mockStatsSvc as never,
   );
 
@@ -99,11 +112,17 @@ describe("GameService", () => {
 
       const addSpy = vi.spyOn(gameService, "addTransactions");
 
+      mockGameRepo.findById.mockReturnValue({
+        platform: "telegram",
+        chat_id: 123,
+        id: gameId,
+      });
+
       const result = gameService.updateGame(gameId, newDate, newTransactions);
 
       expect(mockGameRepo.updateDate).toHaveBeenCalledWith(gameId, newDate);
       expect(mockTxRepo.deleteByGameId).toHaveBeenCalledWith(gameId);
-      expect(addSpy).toHaveBeenCalledWith(gameId, newTransactions);
+      expect(addSpy).toHaveBeenCalledWith(gameId, newTransactions, "telegram", 123);
       expect(result).toBe(1);
 
       addSpy.mockRestore();

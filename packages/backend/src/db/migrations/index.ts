@@ -115,4 +115,114 @@ export const migrations: Migration[] = [
     },
     name: "005_add_community_message_id",
   },
+  {
+    up: (db: Database) => {
+      const tgColExists = db
+        .prepare(`SELECT name FROM pragma_table_info('games') WHERE name = ?`)
+        .get("telegram_bot_message_id");
+      if (!tgColExists) {
+        db.exec(
+          `ALTER TABLE games ADD COLUMN telegram_bot_message_id INTEGER DEFAULT NULL`,
+        );
+      }
+    },
+    name: "006_add_telegram_bot_message_id",
+  },
+  {
+    up: (db: Database) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS global_users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          vk_id INTEGER UNIQUE,
+          telegram_id INTEGER UNIQUE,
+          email TEXT UNIQUE,
+          role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin', 'user')),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS user_identities (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          global_user_id INTEGER NOT NULL REFERENCES global_users(id) ON DELETE CASCADE,
+          platform TEXT NOT NULL,
+          chat_id INTEGER NOT NULL,
+          username TEXT NOT NULL,
+          platform_user_id TEXT,
+          UNIQUE(platform, chat_id, username)
+        )
+      `);
+
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_global_users_vk_id ON global_users(vk_id)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_global_users_telegram_id ON global_users(telegram_id)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_user_identities_lookup ON user_identities(platform, chat_id, username)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_user_identities_global_user ON user_identities(global_user_id)`);
+    },
+    name: "007_add_global_users_and_identities",
+  },
+  {
+    up: (db: Database) => {
+      const identities = db.prepare(`
+        SELECT DISTINCT t.username, g.chat_id, COALESCE(g.platform, 'telegram') as platform
+        FROM transactions t
+        JOIN games g ON t.game_id = g.id
+      `).all() as { username: string; chat_id: number; platform: string }[];
+
+      const insertUser = db.prepare(`
+        INSERT OR IGNORE INTO global_users (role) VALUES ('user')
+      `);
+
+      const insertIdentity = db.prepare(`
+        INSERT OR IGNORE INTO user_identities (global_user_id, platform, chat_id, username)
+        VALUES (?, ?, ?, ?)
+      `);
+
+      const insertMany = db.transaction(() => {
+        for (const row of identities) {
+          const existing = db.prepare(`
+            SELECT gu.id FROM global_users gu
+            LEFT JOIN user_identities ui ON ui.global_user_id = gu.id
+            WHERE ui.platform = ? AND ui.chat_id = ? AND ui.username = ?
+            LIMIT 1
+          `).get(row.platform, row.chat_id, row.username) as { id: number } | undefined;
+
+          if (!existing) {
+            const info = insertUser.run();
+            const newId = Number(info.lastInsertRowid);
+            insertIdentity.run(newId, row.platform, row.chat_id, row.username);
+          }
+        }
+      });
+
+      insertMany();
+    },
+    name: "008_migrate_existing_users",
+  },
+  {
+    up: (db: Database) => {
+      const globalUsersExists = db
+        .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='global_users'`)
+        .get();
+      const usersExists = db
+        .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='users'`)
+        .get();
+
+      if (globalUsersExists && usersExists) {
+        db.exec(`DROP TABLE IF EXISTS users`);
+      }
+    },
+    name: "009_drop_old_users_table",
+  },
+  {
+    up: (db: Database) => {
+      const exists = db
+        .prepare(`SELECT name FROM pragma_table_info('global_users') WHERE name = ?`)
+        .get("name");
+      if (!exists) {
+        db.exec(`ALTER TABLE global_users ADD COLUMN name TEXT DEFAULT NULL`);
+      }
+    },
+    name: "010_add_name_to_global_users",
+  },
 ];

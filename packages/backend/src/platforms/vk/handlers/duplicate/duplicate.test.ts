@@ -11,17 +11,22 @@ vi.mock("@/config/env", () => ({
 }));
 
 vi.mock("@/db/repositories", () => ({
-  GameRepository: {
-    updateCommunityMessageId: vi.fn(),
-    findById: vi.fn(),
+  GameRepository: class {
+    updateCommunityMessageId = vi.fn();
+    findById = vi.fn();
   },
+  UserIdentityRepository: class {},
   TransactionRepository: class {},
+  GlobalUserRepository: class {},
   UserRepository: class {},
 }));
 
 vi.mock("@/di/container", () => ({
   container: {
-    resolve: vi.fn(),
+    resolve: vi.fn(() => new (class {
+      updateCommunityMessageId = vi.fn();
+      findById = vi.fn();
+    })()),
   },
 }));
 

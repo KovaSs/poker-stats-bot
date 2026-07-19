@@ -1,5 +1,29 @@
 # Changelog — poker-stats-monorepo
 
+## [0.3.0] — 2026-07-19
+
+### Backend — [v0.5.0](packages/backend/CHANGELOG.md#050-2026-07-19)
+
+- Global user system with `global_users` and `user_identities` tables
+- VK OAuth authentication with JWT tokens
+- Admin API for user management and game editing
+- SyncService for automatic message updates on game changes
+- `telegram_bot_message_id` column for Telegram message tracking
+- Server-side sorting: `?sort=` + `?order=` для `/api/stats` и `/api/stats/me`
+- Имя пользователя (`name`) в `global_users`, статистика через `COALESCE(gu.name, t.username)`
+- Автосоздание `user_identity` при добавлении транзакций (VK-пользователи в админке)
+- Статистика группируется по `game_date` (игры одного дня не дублируются)
+
+### Frontend — [v0.1.0](packages/frontend/CHANGELOG.md#010-2026-07-19)
+
+- VK OAuth login with FloatingOneTap widget + popup + fallback redirect
+- Auth context (token, user, role)
+- Admin panel with user and game management
+- Personal stats ("Моя статистика") tab
+- MUI AppBar навигация вместо Tabs
+- Сортировка таблиц (Игр/Вход/Выход/Баланс) через сервер + пагинация
+- Удалена Telegram Mini App авторизация
+
 ## [0.2.0] — 2026-07-19
 
 ### Backend — [v0.4.0](packages/backend/CHANGELOG.md#040-2026-07-19)

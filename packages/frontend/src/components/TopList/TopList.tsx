@@ -15,6 +15,7 @@ interface UserStats {
   total_out: number;
   username: string;
   total_in: number;
+  name?: string;
 }
 
 interface TopListProps {
@@ -58,7 +59,7 @@ export const TopList = ({ stats }: TopListProps) => {
               </Avatar>
             </ListItemAvatar>
             <ListItemText
-              primary={item.username}
+              primary={item.name || item.username}
               secondary={`Игр: ${item.games_count} | Вход: ${item.total_in} | Выход: ${item.total_out}`}
             />
             <Typography

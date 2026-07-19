@@ -35,6 +35,20 @@ describe("TransactionRepository", () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(game_id) REFERENCES games(id)
       );
+
+      CREATE TABLE global_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT DEFAULT 'user',
+        name TEXT
+      );
+
+      CREATE TABLE user_identities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        global_user_id INTEGER,
+        platform TEXT,
+        chat_id INTEGER,
+        username TEXT
+      );
     `);
     getDB.mockReturnValue(testDB);
   });

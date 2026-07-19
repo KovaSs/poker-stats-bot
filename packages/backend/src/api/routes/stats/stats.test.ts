@@ -37,6 +37,8 @@ describe("GET /stats", () => {
       123,
       undefined,
       undefined,
+      undefined,
+      undefined,
     );
   });
 
@@ -45,6 +47,8 @@ describe("GET /stats", () => {
     expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(
       123,
       "2024",
+      undefined,
+      undefined,
       undefined,
     );
   });
@@ -55,6 +59,8 @@ describe("GET /stats", () => {
       123,
       undefined,
       "vk",
+      undefined,
+      undefined,
     );
   });
 

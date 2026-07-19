@@ -1,13 +1,14 @@
 import { inject, injectable } from "tsyringe";
 
-import { TransactionRepository, UserRepository } from "@/db/repositories";
-import { logger } from "@/config/logger";
+import { TransactionRepository, UserIdentityRepository } from "@/db/repositories";
 
 export type Filter = {
   year?: string;
   all?: boolean;
   sinceDate?: string;
   platform?: string;
+  sort?: string;
+  order?: string;
 };
 
 function buildFilter(filter?: string | "all"): Filter {
@@ -27,91 +28,66 @@ function buildFilter(filter?: string | "all"): Filter {
 export class StatsService {
   constructor(
     @inject(TransactionRepository) private readonly transactionRepository: TransactionRepository,
-    @inject(UserRepository) private readonly userRepository: UserRepository,
+    @inject(UserIdentityRepository) private readonly userIdentityRepository: UserIdentityRepository,
   ) {}
 
   recalcStats(): void {
-    logger.info("[StatsService] Пересчёт статистики...");
-    this.userRepository.clear();
+    // Таблица users удалена (миграция 009), статистика считается в реальном времени
+  }
 
-    const rows = this.transactionRepository.getGroupedByUsernameAndGame();
-
-    const userMap = new Map<
-      string,
-      { total_in: number; total_out: number; games: Set<number> }
-    >();
-    for (const row of rows) {
-      const key = row.username;
-      if (!userMap.has(key)) {
-        userMap.set(key, { games: new Set(), total_out: 0, total_in: 0 });
-      }
-      const user = userMap.get(key)!;
-      user.total_in += row.total_in;
-      user.total_out += row.total_out;
-      user.games.add(row.game_id);
-    }
-
-    const usersToInsert = Array.from(userMap.entries()).map(
-      ([username, data]) => ({
-        game_ids: JSON.stringify(Array.from(data.games)),
-        games_count: data.games.size,
-        total_out: data.total_out,
-        total_in: data.total_in,
-        username,
-      }),
-    );
-
-    this.userRepository.insertMany(usersToInsert);
-    logger.info(
-      `[StatsService] Пересчёт завершён, обработано пользователей: ${usersToInsert.length}`,
-    );
+  private applySort(f: Filter, sort?: string, order?: string): Filter {
+    return { ...f, order, sort };
   }
 
   getFilteredScores(
     chatId?: number,
     filter?: string | "all",
     platform?: string,
+    sort?: string,
+    order?: string,
   ) {
-    const f = buildFilter(filter);
+    const f = this.applySort(buildFilter(filter), sort, order);
     f.platform = platform;
-    if (f.all) {
-      return this.transactionRepository.getFilteredScores(chatId, { platform });
-    }
-    if (f.year) {
-      return this.transactionRepository.getFilteredScores(chatId, {
-        year: f.year,
-        platform,
-      });
-    }
-    return this.transactionRepository.getFilteredScores(chatId, {
-      sinceDate: f.sinceDate,
-      platform,
-    });
+    return this.transactionRepository.getFilteredScores(chatId, f);
   }
 
   getFilteredStats(
     chatId?: number,
     filter?: string | "all",
     platform?: string,
+    sort?: string,
+    order?: string,
   ) {
-    const f = buildFilter(filter);
+    const f = this.applySort(buildFilter(filter), sort, order);
     f.platform = platform;
-    if (f.all) {
-      return this.transactionRepository.getFilteredStats(chatId, { platform });
-    }
-    if (f.year) {
-      return this.transactionRepository.getFilteredStats(chatId, {
-        year: f.year,
-        platform,
-      });
-    }
-    return this.transactionRepository.getFilteredStats(chatId, {
-      sinceDate: f.sinceDate,
-      platform,
-    });
+    return this.transactionRepository.getFilteredStats(chatId, f);
   }
 
   getAvailableYears(chatId?: number, platform?: string): string[] {
     return this.transactionRepository.getDistinctYears(chatId, platform);
+  }
+
+  getFilteredStatsForUser(
+    globalUserId: number,
+    filter?: string | "all",
+    platform?: string,
+    sort?: string,
+    order?: string,
+  ) {
+    const f = this.applySort(buildFilter(filter), sort, order);
+    f.platform = platform;
+    return this.transactionRepository.getFilteredStatsByGlobalUserId(globalUserId, f);
+  }
+
+  getFilteredScoresForUser(
+    globalUserId: number,
+    filter?: string | "all",
+    platform?: string,
+    sort?: string,
+    order?: string,
+  ) {
+    const f = this.applySort(buildFilter(filter), sort, order);
+    f.platform = platform;
+    return this.transactionRepository.getFilteredScoresByGlobalUserId(globalUserId, f);
   }
 }

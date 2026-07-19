@@ -1,6 +1,6 @@
 import { inject, injectable } from "tsyringe";
 
-import { GameRepository, TransactionRepository } from "@/db/repositories";
+import { GameRepository, GlobalUserRepository, TransactionRepository, UserIdentityRepository } from "@/db/repositories";
 
 import { ParsedTransaction } from "../parser.service";
 import { StatsService } from "../stats.service";
@@ -10,8 +10,18 @@ export class GameService {
   constructor(
     @inject(GameRepository) private readonly gameRepository: GameRepository,
     @inject(TransactionRepository) private readonly transactionRepository: TransactionRepository,
+    @inject(GlobalUserRepository) private readonly globalUserRepository: GlobalUserRepository,
+    @inject(UserIdentityRepository) private readonly userIdentityRepository: UserIdentityRepository,
     @inject(StatsService) private readonly statsService: StatsService,
   ) {}
+
+  private ensureUserIdentity(platform: string, chatId: number, username: string, platformUserId?: string | number): void {
+    const existing = this.userIdentityRepository.findByPlatformAndChat(platform, chatId, username);
+    if (existing) return;
+
+    const globalUserId = this.globalUserRepository.create();
+    this.userIdentityRepository.create(globalUserId, platform, chatId, username, platformUserId);
+  }
 
   updateGame(
     gameId: number,
@@ -20,6 +30,11 @@ export class GameService {
   ): number {
     this.gameRepository.updateDate(gameId, newDate);
     this.transactionRepository.deleteByGameId(gameId);
+    const game = this.gameRepository.findById(gameId);
+    if (game) {
+      const savedCount = this.addTransactions(gameId, newTransactions, game.platform || "telegram", game.chat_id);
+      return savedCount;
+    }
     const savedCount = this.addTransactions(gameId, newTransactions);
     return savedCount;
   }
@@ -34,10 +49,13 @@ export class GameService {
     return true;
   }
 
-  addTransactions(gameId: number, transactions: ParsedTransaction[]): number {
+  addTransactions(gameId: number, transactions: ParsedTransaction[], platform?: string, chatId?: number): number {
     let savedCount = 0;
     for (const tx of transactions) {
       this.transactionRepository.add(gameId, tx.username, tx.amount, tx.type);
+      if (platform && chatId) {
+        this.ensureUserIdentity(platform, chatId, tx.username);
+      }
       savedCount++;
     }
     this.statsService.recalcStats();

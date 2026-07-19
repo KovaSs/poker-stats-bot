@@ -1,5 +1,6 @@
 import { VK_COMMUNITY_CHAT_ID } from "@/config/env";
 import { GameRepository } from "@/db/repositories";
+import { container } from "@/di/container";
 import { logger } from "@/config/logger";
 
 import { getVK } from "../../bot";
@@ -23,7 +24,8 @@ export async function duplicateToCommunityChat(
     return;
   }
 
-  const game = GameRepository.findById(gameId);
+  const gameRepo = container.resolve(GameRepository);
+  const game = gameRepo.findById(gameId);
   if (!game) return;
 
   try {
@@ -48,7 +50,7 @@ export async function duplicateToCommunityChat(
         const msgId = typeof sent === "object"
           ? (sent as { message_id?: number }).message_id ?? Number(sent)
           : Number(sent);
-        GameRepository.updateCommunityMessageId(gameId, msgId);
+        gameRepo.updateCommunityMessageId(gameId, msgId);
         logger.info(
           `[VK] Отправлен community message ${msgId} для игры ${gameId}`,
         );

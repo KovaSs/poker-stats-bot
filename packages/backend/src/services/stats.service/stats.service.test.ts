@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Database from "better-sqlite3";
 
+import { UserIdentityRepository } from "@/db/repositories/userIdentity.repository";
 import { TransactionRepository } from "@/db/repositories/transaction.repository";
 import { GameRepository } from "@/db/repositories/game.repository";
-import { UserRepository } from "@/db/repositories/user.repository";
 import { getDB } from "@/db/connection";
 
 import { StatsService } from "./stats.service";
@@ -14,8 +14,8 @@ vi.mock("@/db/connection", () => ({
 
 const gameRepo = new GameRepository();
 const txRepo = new TransactionRepository();
-const userRepo = new UserRepository();
-const statsService = new StatsService(txRepo, userRepo);
+const userIdentityRepo = new UserIdentityRepository();
+const statsService = new StatsService(txRepo, userIdentityRepo);
 
 describe("StatsService", () => {
   let testDB: Database.Database;
@@ -37,6 +37,20 @@ describe("StatsService", () => {
         amount INTEGER,
         type TEXT
       );
+      CREATE TABLE global_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT DEFAULT 'user',
+        name TEXT
+      );
+
+      CREATE TABLE user_identities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        global_user_id INTEGER,
+        platform TEXT,
+        chat_id INTEGER,
+        username TEXT
+      );
+
       CREATE TABLE users (
         username TEXT PRIMARY KEY,
         total_in INTEGER DEFAULT 0,
@@ -79,13 +93,11 @@ describe("StatsService", () => {
     ]);
   });
 
-  it("пересчитывает агрегированную статистику", () => {
+  it("recalcStats не вызывает ошибок (no-op после удаления таблицы users)", () => {
     const gameId = gameRepo.create(1, 1, "2025-01-01");
     txRepo.add(gameId, "user1", 100, "in");
     txRepo.add(gameId, "user1", 200, "out");
-    statsService.recalcStats();
-    const users = testDB.prepare("SELECT * FROM users ORDER BY username").all();
-    expect(users).toHaveLength(1);
+    expect(() => statsService.recalcStats()).not.toThrow();
   });
 
   it("получает статистику без chatId (глобально)", () => {

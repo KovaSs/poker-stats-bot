@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
 
-import { authMiddleware } from "@/middlewares/auth";
+import { combinedAuth } from "@/middlewares/combinedAuth/combinedAuth";
 import { logger } from "@/config/logger";
 import { API_PORT } from "@/config/env";
 
-import { statsRouter, yearsRouter } from "./routes";
+import { statsRouter, yearsRouter, authRouter, adminRouter } from "./routes";
 
 export function startApiServer() {
   const app = express();
@@ -14,8 +14,10 @@ export function startApiServer() {
 
   app.use(express.json());
 
-  app.use("/api/years", authMiddleware, yearsRouter);
-  app.use("/api/stats", authMiddleware, statsRouter);
+  app.use("/api/auth", authRouter);
+  app.use("/api/years", combinedAuth, yearsRouter);
+  app.use("/api/stats", combinedAuth, statsRouter);
+  app.use("/api/admin", adminRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: "Not found" });

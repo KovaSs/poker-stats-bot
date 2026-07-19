@@ -65,7 +65,7 @@ describe("GameProcessor", () => {
     );
     expect(mockGameService.addTransactions).toHaveBeenCalledWith(42, [
       { username: "User", amount: 500, type: "in" },
-    ]);
+    ], "telegram", 12345);
   });
 
   it("создаёт игру с платформой vk", async () => {

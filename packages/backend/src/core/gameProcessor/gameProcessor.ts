@@ -79,7 +79,7 @@ export class GameProcessor {
         gameDate,
         message.platform,
       );
-      const savedCount = this.gameService.addTransactions(gameId, transactions);
+      const savedCount = this.gameService.addTransactions(gameId, transactions, message.platform, message.chatId);
 
       if (savedCount > 0) {
         logger.info(
