@@ -14,6 +14,9 @@ services:
       - VK_CLIENT_ID=${VK_CLIENT_ID}
       - VK_CLIENT_SECRET=${VK_CLIENT_SECRET}
       - JWT_SECRET=${JWT_SECRET}
+      - VK_ACCESS_TOKEN=${JWT_SECRET}
+      - VK_GROUP_ID=${JWT_SECRET}
+      - VK_COMMUNITY_CHAT_ID=${JWT_SECRET}
     volumes:
       - ./data:/app/data
     ports:
