@@ -11,6 +11,9 @@ services:
       - NODE_ENV=production
       - SKIP_AUTH=true
       - API_PORT=3000
+      - VK_CLIENT_ID=${VK_CLIENT_ID}
+      - VK_CLIENT_SECRET=${VK_CLIENT_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
     volumes:
       - ./data:/app/data
     ports:
