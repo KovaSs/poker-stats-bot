@@ -2,15 +2,19 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 
-import { StatsService } from "@/services";
+const mockStatsService = vi.hoisted(() => ({
+  getAvailableYears: vi.fn(),
+  getFilteredScores: vi.fn(),
+  getFilteredStats: vi.fn(),
+}));
 
-import yearsRouter from "./years";
-
-vi.mock("@/services", () => ({
-  StatsService: {
-    getAvailableYears: vi.fn(),
+vi.mock("@/di/container", () => ({
+  container: {
+    resolve: vi.fn(() => mockStatsService),
   },
 }));
+
+import yearsRouter from "./years";
 
 const app = express();
 app.use("/years", yearsRouter);
@@ -21,7 +25,7 @@ describe("GET /years", () => {
   });
 
   it("возвращает список годов", async () => {
-    StatsService.getAvailableYears.mockReturnValue(["2024", "2025"]);
+    mockStatsService.getAvailableYears.mockReturnValue(["2024", "2025"]);
     const res = await request(app).get("/years?chatId=123");
     expect(res.status).toBe(200);
     expect(res.body).toEqual(["2024", "2025"]);
@@ -29,7 +33,7 @@ describe("GET /years", () => {
 
   it("передаёт параметр platform", async () => {
     await request(app).get("/years?chatId=123&platform=vk");
-    expect(StatsService.getAvailableYears).toHaveBeenCalledWith(123, "vk");
+    expect(mockStatsService.getAvailableYears).toHaveBeenCalledWith(123, "vk");
   });
 
   it("возвращает 400 если chatId отсутствует", async () => {
@@ -45,7 +49,7 @@ describe("GET /years", () => {
   });
 
   it("возвращает 500 при ошибке сервиса", async () => {
-    StatsService.getAvailableYears.mockImplementation(() => {
+    mockStatsService.getAvailableYears.mockImplementation(() => {
       throw new Error("DB error");
     });
     const res = await request(app).get("/years?chatId=123");

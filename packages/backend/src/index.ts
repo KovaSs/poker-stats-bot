@@ -1,3 +1,5 @@
+import "reflect-metadata";
+
 import { BOT_TOKEN, TELEGRAM_API_URL } from "@/config/env";
 import { setupBot } from "@/platforms/telegram/bot";
 import { initVKPlatform } from "@/platforms/vk";

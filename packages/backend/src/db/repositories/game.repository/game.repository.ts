@@ -1,3 +1,5 @@
+import { injectable } from "tsyringe";
+
 import { logger } from "@/config/logger";
 import { getDB } from "@/db/connection";
 
@@ -12,7 +14,8 @@ export interface GameRow {
   id: number;
 }
 
-export const GameRepository = {
+@injectable()
+export class GameRepository {
   findByChatAndMessage(chatId: number, messageId: number): GameRow | null {
     const stmt = getDB().prepare(
       `SELECT * FROM games WHERE chat_id = ? AND message_id = ?`,
@@ -29,7 +32,7 @@ export const GameRepository = {
       );
     }
     return null;
-  },
+  }
 
   create(
     chatId: number,
@@ -45,7 +48,7 @@ export const GameRepository = {
       `[DB] createGame успешно, lastID: ${info.lastInsertRowid}, дата: ${gameDate || "не указана"}, платформа: ${platform}`,
     );
     return Number(info.lastInsertRowid);
-  },
+  }
 
   updateWallPostId(
     id: number,
@@ -59,7 +62,7 @@ export const GameRepository = {
     logger.info(
       `[DB] Игра ${id}: привязан wall post ${wallPostId} (owner ${wallOwnerId})`,
     );
-  },
+  }
 
   updateCommunityMessageId(id: number, communityMessageId: number): void {
     const stmt = getDB().prepare(
@@ -69,30 +72,30 @@ export const GameRepository = {
     logger.info(
       `[DB] Игра ${id}: привязан community message ${communityMessageId}`,
     );
-  },
+  }
 
   updateDate(id: number, gameDate: string): void {
     const stmt = getDB().prepare(`UPDATE games SET game_date = ? WHERE id = ?`);
     stmt.run(gameDate, id);
     logger.info(`[DB] Дата игры ${id} обновлена на ${gameDate}`);
-  },
+  }
 
   delete(id: number): void {
     const stmt = getDB().prepare(`DELETE FROM games WHERE id = ?`);
     const info = stmt.run(id);
     logger.info(`[DB] Удалена игра ID ${id}, изменено строк: ${info.changes}`);
-  },
+  }
 
   deleteByChatAndMessage(chatId: number, messageId: number): boolean {
     const game = this.findByChatAndMessage(chatId, messageId);
     if (!game) return false;
     this.delete(game.id);
     return true;
-  },
+  }
 
   findById(id: number): GameRow | null {
     const stmt = getDB().prepare(`SELECT * FROM games WHERE id = ?`);
     const row = stmt.get(id) as GameRow | undefined;
     return row || null;
-  },
-};
+  }
+}

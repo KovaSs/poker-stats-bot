@@ -9,6 +9,8 @@ vi.mock("@/db/connection", () => ({
   getDB: vi.fn(),
 }));
 
+const userRepo = new UserRepository();
+
 describe("UserRepository", () => {
   let testDB: Database.Database;
 
@@ -38,7 +40,7 @@ describe("UserRepository", () => {
         )
         .run("user1", 123, 100, 50, 2, "[1,2]");
 
-      const user = UserRepository.findByUsername("user1");
+      const user = userRepo.findByUsername("user1");
       expect(user).not.toBeNull();
       expect(user).toMatchObject({
         username: "user1",
@@ -51,7 +53,7 @@ describe("UserRepository", () => {
     });
 
     it("возвращает null, если пользователь не найден", () => {
-      const user = UserRepository.findByUsername("unknown");
+      const user = userRepo.findByUsername("unknown");
       expect(user).toBeNull();
     });
   });
@@ -67,20 +69,20 @@ describe("UserRepository", () => {
         )
         .run("user1", 123, 100, 50, 2, "[1,2]");
 
-      const user = UserRepository.findByTelegramId(123);
+      const user = userRepo.findByTelegramId(123);
       expect(user).not.toBeNull();
       expect(user?.username).toBe("user1");
     });
 
     it("возвращает null, если telegram_id не найден", () => {
-      const user = UserRepository.findByTelegramId(999);
+      const user = userRepo.findByTelegramId(999);
       expect(user).toBeNull();
     });
   });
 
   describe("upsert", () => {
     it("вставляет нового пользователя", () => {
-      UserRepository.upsert({
+      userRepo.upsert({
         username: "newuser",
         telegram_id: 999,
         game_ids: "[5]",
@@ -103,7 +105,6 @@ describe("UserRepository", () => {
     });
 
     it("обновляет существующего пользователя", () => {
-      // Сначала вставляем
       testDB
         .prepare(
           `
@@ -113,11 +114,10 @@ describe("UserRepository", () => {
         )
         .run("existing", 111, 20, 10, 2, "[1,2]");
 
-      // Обновляем
-      UserRepository.upsert({
+      userRepo.upsert({
         username: "existing",
-        game_ids: "[1,2,3]", // явно передаём новый game_ids
-        telegram_id: 222, // telegram_id обновится
+        game_ids: "[1,2,3]",
+        telegram_id: 222,
         games_count: 3,
         total_out: 15,
         total_in: 30,
@@ -137,7 +137,6 @@ describe("UserRepository", () => {
     });
 
     it("при обновлении сохраняет старые game_ids, если новые не переданы", () => {
-      // Вставляем пользователя со старыми game_ids
       testDB
         .prepare(
           `
@@ -147,8 +146,7 @@ describe("UserRepository", () => {
         )
         .run("existing", 111, 20, 10, 2, "[1,2]");
 
-      // Обновляем без game_ids
-      UserRepository.upsert({
+      userRepo.upsert({
         username: "existing",
         games_count: 3,
         total_out: 15,
@@ -158,7 +156,7 @@ describe("UserRepository", () => {
       const user = testDB
         .prepare(`SELECT * FROM users WHERE username = ?`)
         .get("existing");
-      expect(user.game_ids).toBe("[1,2]"); // остались старые
+      expect(user.game_ids).toBe("[1,2]");
       expect(user.total_in).toBe(30);
       expect(user.total_out).toBe(15);
     });
@@ -181,7 +179,7 @@ describe("UserRepository", () => {
         )
         .run("user2", 200);
 
-      UserRepository.clear();
+      userRepo.clear();
       const count = testDB
         .prepare(`SELECT COUNT(*) as cnt FROM users`)
         .get() as { cnt: number };
@@ -207,7 +205,7 @@ describe("UserRepository", () => {
           total_in: 3,
         },
       ];
-      UserRepository.insertMany(users);
+      userRepo.insertMany(users);
 
       const all = testDB
         .prepare(

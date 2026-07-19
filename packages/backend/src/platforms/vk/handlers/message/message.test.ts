@@ -1,5 +1,11 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+const mockStatsService = vi.hoisted(() => ({
+  getFilteredScores: vi.fn(),
+  getAvailableYears: vi.fn(),
+  getFilteredStats: vi.fn(),
+}));
+
 vi.mock("@/core", () => ({
   processGameMessage: vi.fn(),
   formatStatsTable: vi.fn(),
@@ -8,10 +14,15 @@ vi.mock("@/core", () => ({
 }));
 
 vi.mock("@/services", () => ({
-  StatsService: {
-    getFilteredScores: vi.fn(),
-    getAvailableYears: vi.fn(),
-    getFilteredStats: vi.fn(),
+  StatsService: mockStatsService,
+}));
+
+vi.mock("@/di/container", () => ({
+  container: {
+    resolve: vi.fn((token: unknown) => {
+      if (token === mockStatsService) return mockStatsService;
+      return mockStatsService;
+    }),
   },
 }));
 
@@ -59,7 +70,6 @@ vi.mock("../../handlers/menu/menu", () => ({
 }));
 
 import { processGameMessage, processCommand, formatStatsTable, formatTopList } from "@/core";
-import { StatsService } from "@/services";
 import { logger } from "@/config/logger";
 
 import { vkContextToIMessage } from "../../adapters";
@@ -89,7 +99,7 @@ describe("handleVKMessage", () => {
   it("обрабатывает нажатие кнопки статистики", async () => {
     vkContextToIMessage.mockReturnValue({ text: "📊 Статистика", chatId: 2000000001, platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: undefined, reply: null });
-    StatsService.getAvailableYears.mockReturnValue(["2024"]);
+    mockStatsService.getAvailableYears.mockReturnValue(["2024"]);
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { conversationMessageId: 1, text: "📊 Статистика", peerId: 2000000001, peerType: "chat", send: mockSend } as any,
@@ -133,40 +143,40 @@ describe("handleVKMessage", () => {
   it("обрабатывает выбор года из фильтра статистики", async () => {
     vkContextToIMessage.mockReturnValue({ chatId: 2000000001, text: "📊 2026", platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: "2026", reply: null });
-    StatsService.getFilteredStats.mockReturnValue([]);
+    mockStatsService.getFilteredStats.mockReturnValue([]);
     formatStatsTable.mockReturnValue("stats");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { conversationMessageId: 1, peerId: 2000000001, peerType: "chat", text: "📊 2026", send: mockSend } as any,
       false,
     );
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(undefined, "2026");
+    expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(undefined, "2026");
   });
 
   it("обрабатывает выбор 'Всё время' из фильтра статистики", async () => {
     vkContextToIMessage.mockReturnValue({ text: "📊 Всё время", chatId: 2000000001, platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: "all", reply: null });
-    StatsService.getFilteredStats.mockReturnValue([]);
+    mockStatsService.getFilteredStats.mockReturnValue([]);
     formatStatsTable.mockReturnValue("stats");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { conversationMessageId: 1, text: "📊 Всё время", peerId: 2000000001, peerType: "chat", send: mockSend } as any,
       false,
     );
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(undefined, "all");
+    expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(undefined, "all");
   });
 
   it("обрабатывает выбор года из фильтра топа", async () => {
     vkContextToIMessage.mockReturnValue({ chatId: 2000000001, text: "🏆 2025", platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: "2025", reply: null });
-    StatsService.getFilteredScores.mockReturnValue([]);
+    mockStatsService.getFilteredScores.mockReturnValue([]);
     formatTopList.mockReturnValue("top");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { conversationMessageId: 1, peerId: 2000000001, peerType: "chat", text: "🏆 2025", send: mockSend } as any,
       false,
     );
-    expect(StatsService.getFilteredScores).toHaveBeenCalledWith(undefined, "2025");
+    expect(mockStatsService.getFilteredScores).toHaveBeenCalledWith(undefined, "2025");
   });
 
   it("обрабатывает пустое упоминание", async () => {
@@ -193,13 +203,13 @@ describe("handleVKMessage", () => {
   it("обрабатывает команду !top из текста", async () => {
     vkContextToIMessage.mockReturnValue({ text: "@poker_club !top 2024", chatId: 2000000001, platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: "2024", reply: null });
-    StatsService.getFilteredScores.mockReturnValue([]);
+    mockStatsService.getFilteredScores.mockReturnValue([]);
     formatTopList.mockReturnValue("top");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { text: "@poker_club !top 2024", conversationMessageId: 1, peerId: 2000000001, peerType: "chat", send: mockSend } as any,
       false,
     );
-    expect(StatsService.getFilteredScores).toHaveBeenCalledWith(undefined, "2024");
+    expect(mockStatsService.getFilteredScores).toHaveBeenCalledWith(undefined, "2024");
   });
 });

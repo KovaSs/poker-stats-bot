@@ -5,15 +5,11 @@ import {
   formatTopList,
 } from "@/core";
 import { VK_GROUP_ID } from "@/config/env";
+import { container } from "@/di/container";
 import { StatsService } from "@/services";
 import { logger } from "@/config/logger";
 
-import {
-  buildMenuKeyboard,
-  buildStatsFilterKeyboard,
-  buildTopFilterKeyboard,
-  buttonCommands,
-} from "../menu/menu";
+import { buildMenuKeyboard, buildStatsFilterKeyboard, buildTopFilterKeyboard, buttonCommands } from "../menu/menu";
 import { duplicateToCommunityChat } from "../../handlers/duplicate/duplicate";
 import { scheduleAutoDelete } from "../../middlewares";
 import { vkContextToIMessage } from "../../adapters";
@@ -21,6 +17,10 @@ import { getVK } from "../../bot";
 
 import type { VKContext } from "../../adapters";
 import type { IMessage } from "@/core";
+
+function getStatsService(): StatsService {
+  return container.resolve(StatsService);
+}
 
 // Храним ID последнего сообщения-подсказки с фильтрами для каждого чата
 const lastFilterPromptIds = new Map<number, number>();
@@ -200,7 +200,7 @@ async function processAndReply(
     return {};
   }
 
-  const years = StatsService.getAvailableYears();
+  const years = getStatsService().getAvailableYears();
 
   // Показываем inline-клавиатуру с фильтрами при запросе статистики/топа
   if (
@@ -224,7 +224,7 @@ async function processAndReply(
           .catch(() => {});
       }
       logger.info(`[VK] Статистика с фильтром: ${commandResult.filter}`);
-      const stats = StatsService.getFilteredStats(undefined, commandResult.filter);
+      const stats = getStatsService().getFilteredStats(undefined, commandResult.filter);
       await send(formatStatsTable(stats, commandResult.filter));
     } else {
       await send("📊 Выберите период для статистики:", {
@@ -254,7 +254,7 @@ async function processAndReply(
           .catch(() => {});
       }
       logger.info(`[VK] Топ с фильтром: ${commandResult.filter}`);
-      const scores = StatsService.getFilteredScores(undefined, commandResult.filter);
+      const scores = getStatsService().getFilteredScores(undefined, commandResult.filter);
       await send(formatTopList(scores, commandResult.filter));
     } else {
       await send("🏆 Выберите период для топа:", {

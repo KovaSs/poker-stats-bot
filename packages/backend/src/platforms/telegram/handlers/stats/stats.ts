@@ -1,5 +1,6 @@
 import { Context } from "telegraf";
 
+import { container } from "@/di/container";
 import { formatStatsTable } from "@/core";
 import { StatsService } from "@/services";
 import { logger } from "@/config/logger";
@@ -8,6 +9,10 @@ import { replyWithAutoDelete } from "../../middlewares";
 import { escapeMarkdown } from "../common";
 
 import type { InlineKeyboardButton } from "telegraf/types";
+
+function getStatsService(): StatsService {
+  return container.resolve(StatsService);
+}
 
 function buildYearKeyboard(
   prefix: string,
@@ -38,7 +43,7 @@ function buildYearKeyboard(
 
 export async function sendStats(ctx: Context, chatId: number, filter?: string) {
   try {
-    const stats = StatsService.getFilteredStats(chatId, filter);
+    const stats = getStatsService().getFilteredStats(chatId, filter);
     const message = formatStatsTable(stats, filter);
     await replyWithAutoDelete(ctx, message, { parse_mode: "Markdown" });
   } catch (error) {
@@ -49,7 +54,7 @@ export async function sendStats(ctx: Context, chatId: number, filter?: string) {
 
 export async function sendTop(ctx: Context, chatId: number, filter?: string) {
   try {
-    const scores = StatsService.getFilteredScores(chatId, filter);
+    const scores = getStatsService().getFilteredScores(chatId, filter);
     if (scores.length === 0) {
       await replyWithAutoDelete(ctx, "🏆 Пока нет данных за указанный период.");
       return;
@@ -78,7 +83,7 @@ export async function sendTop(ctx: Context, chatId: number, filter?: string) {
 }
 
 export async function sendStatsPeriodKeyboard(ctx: Context, chatId: number) {
-  const years = StatsService.getAvailableYears(chatId);
+  const years = getStatsService().getAvailableYears(chatId);
   const keyboard = buildYearKeyboard("stats", years);
   await replyWithAutoDelete(ctx, "📊 Выберите период для статистики:", {
     reply_markup: keyboard,
@@ -87,7 +92,7 @@ export async function sendStatsPeriodKeyboard(ctx: Context, chatId: number) {
 }
 
 export async function sendTopPeriodKeyboard(ctx: Context, chatId: number) {
-  const years = StatsService.getAvailableYears(chatId);
+  const years = getStatsService().getAvailableYears(chatId);
   const keyboard = buildYearKeyboard("top", years);
   await replyWithAutoDelete(ctx, "🏆 Выберите период для топа:", {
     reply_markup: keyboard,

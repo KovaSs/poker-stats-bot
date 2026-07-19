@@ -8,6 +8,7 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
       provider: "v8",
     },
+    setupFiles: ["./vitest.setup.ts"],
     passWithNoTests: true,
     environment: "node",
     testTimeout: 10000,

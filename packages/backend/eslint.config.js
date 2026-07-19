@@ -11,13 +11,13 @@ export default defineConfig([
   {
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.json",
+        project: "./tsconfig.eslint.json",
         tsconfigRootDir: __dirname,
       },
     },
     rules: {
-      "no-console": "off",
       "@typescript-eslint/no-var-requires": "off",
+      "no-console": "off",
     },
   },
 ]);

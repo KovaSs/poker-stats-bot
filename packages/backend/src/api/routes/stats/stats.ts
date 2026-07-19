@@ -1,6 +1,12 @@
 import { Router } from "express";
 
+import { container } from "@/di/container";
 import { StatsService } from "@/services";
+import { logger } from "@/config/logger";
+
+function getStatsService(): StatsService {
+  return container.resolve(StatsService);
+}
 
 const router = Router();
 
@@ -18,10 +24,10 @@ router.get("/", (req, res) => {
       return res.status(400).json({ error: "Invalid chatId" });
     }
 
-    const stats = StatsService.getFilteredStats(chatId, filter, platform);
+    const stats = getStatsService().getFilteredStats(chatId, filter, platform);
     res.json(stats);
   } catch (error) {
-    console.error("[API] /stats error:", error);
+    logger.error({ error }, "[API] /stats error");
     res.status(500).json({ error: "Internal server error" });
   }
 });

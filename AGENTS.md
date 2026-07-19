@@ -36,7 +36,7 @@ Entrypoint: `packages/backend/src/index.ts` — inits DB, launches Telegraf bot,
 
 Layers (top→bottom):
 
-- `core/` — platform-agnostic: `gameProcessor.ts` (processGameMessage), `statsPresenter.ts` (formatStatsTable/TopList/Help/processCommand), `types.ts` (IMessage, IReply, Platform)
+- `core/` — platform-agnostic: `gameProcessor/` (GameProcessor класс), `statsPresenter/` (formatStatsTable/TopList/Help/processCommand), `types.ts` (IMessage, IReply, Platform)
 - `platforms/telegram/` — thin Telegram adapters, convert Telegraf ctx → IMessage, call core functions
 - `platforms/vk/` — VK adapter via vk-io Long Poll, vkContextToIMessage, calls core functions
 - `services/` — GameService, StatsService, ParserService
@@ -48,6 +48,7 @@ Layers (top→bottom):
 - To add a new platform, create a platform adapter that converts platform message → `IMessage`, calls `processGameMessage` from core, and handles reply.
 - `core/` must NOT import from platform layers (telegram, vk). It imports only from `services/`, `db/repositories/`, `config/logger`.
 - `games` table has `platform TEXT DEFAULT 'telegram'` column. Old rows without it act as `telegram` via DEFAULT.
+- **Filenames must use camelCase** (shakeCase), never kebab-case. Example: `gameProcessor.ts`, `statsPresenter.ts`.
 
 ### Path alias
 
@@ -71,6 +72,38 @@ Layers (top→bottom):
 - DB-dependent tests: services layer is mocked in API tests; service/repo tests use actual in-memory SQLite
 - New platform logic belongs in `core/`, test in `core/*.test.ts`
 - **151 tests**, **73% coverage** overall
+
+## Versioning & Changelog
+
+### Semver rules
+
+- **Patch** (`0.0.x`) — bugfixes, refactoring without new functionality, test changes, docs
+- **Minor** (`0.x.0`) — new features, new API endpoints, new platform support, new components
+- **Major** (`x.0.0`) — breaking changes in public API, database schema migrations requiring manual intervention, removal of features
+
+### Package versions
+
+- `packages/backend/` and `packages/frontend/` version independently
+- Each package has its own `CHANGELOG.md` with per-version entries
+- Root `CHANGELOG.md` aggregates changes across packages per release
+
+### Changelog rules
+
+1. **Package changelogs** (`packages/*/CHANGELOG.md`):
+   - Every version change must have a corresponding entry
+   - Use semantic grouping: `### Added`, `### Changed`, `### Removed`, `### Fixed`
+   - Add `<a name="VERSION"></a>` anchor before each version heading (format: `X-Y-Z` for `X.Y.Z`, e.g. `0-3-1`)
+   - Reference the monorepo in the title: `# Changelog — \`package-name\` (poker-stats-monorepo)`
+
+2. **Root changelog** (`CHANGELOG.md`):
+   - Top-level `## [version] — YYYY-MM-DD` headings
+   - Per-package sections: `### Backend — [vX.Y.Z](link#anchor)` and `### Frontend — [vX.Y.Z](link#anchor)`
+   - Include only the most notable changes per package (3–5 bullet points max)
+   - Full details live in the respective package changelog
+
+3. **When to bump**:
+   - Bump version in `package.json` + `CHANGELOG.md` in the same commit as the changes
+   - Run `pnpm test` and `pnpm lint` before committing
 
 ## ESLint quirks
 

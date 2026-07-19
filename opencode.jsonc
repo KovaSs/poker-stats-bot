@@ -1,0 +1,6 @@
+{
+  // OpenCode configuration — https://opencode.ai
+  "models": {
+    "default": "deepseek/deepseek-v4-flash"
+  }
+}

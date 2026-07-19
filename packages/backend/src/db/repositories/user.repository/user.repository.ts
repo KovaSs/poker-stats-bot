@@ -1,3 +1,5 @@
+import { injectable } from "tsyringe";
+
 import { logger } from "@/config/logger";
 import { getDB } from "@/db/connection";
 
@@ -7,12 +9,12 @@ export interface UserRow {
   total_out: number;
   username: string;
   total_in: number;
-  game_ids: string; // JSON array
+  game_ids: string;
 }
 
-export const UserRepository = {
+@injectable()
+export class UserRepository {
   upsert(user: Partial<UserRow> & { username: string }): void {
-    // Сначала пробуем обновить, если есть, иначе вставляем
     const existing = this.findByUsername(user.username);
     const newGameIds = user.game_ids
       ? user.game_ids
@@ -39,7 +41,7 @@ export const UserRepository = {
       newGameIds,
     );
     logger.info(`[DB] Upsert пользователя ${user.username}`);
-  },
+  }
 
   insertMany(
     users: {
@@ -67,21 +69,21 @@ export const UserRepository = {
     });
     insert(users);
     logger.info(`[DB] Вставлено ${users.length} пользователей`);
-  },
+  }
 
   findByTelegramId(telegramId: number): UserRow | null {
     const stmt = getDB().prepare(`SELECT * FROM users WHERE telegram_id = ?`);
     const row = stmt.get(telegramId) as UserRow | undefined;
     return row || null;
-  },
+  }
 
   findByUsername(username: string): UserRow | null {
     const stmt = getDB().prepare(`SELECT * FROM users WHERE username = ?`);
     const row = stmt.get(username) as UserRow | undefined;
     return row || null;
-  },
+  }
 
   clear(): void {
     getDB().prepare(`DELETE FROM users`).run();
-  },
-};
+  }
+}

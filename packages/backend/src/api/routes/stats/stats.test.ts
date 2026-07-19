@@ -2,15 +2,19 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 
-import { StatsService } from "@/services";
+const mockStatsService = vi.hoisted(() => ({
+  getAvailableYears: vi.fn(),
+  getFilteredScores: vi.fn(),
+  getFilteredStats: vi.fn(),
+}));
 
-import statsRouter from "./stats";
-
-vi.mock("@/services", () => ({
-  StatsService: {
-    getFilteredStats: vi.fn(),
+vi.mock("@/di/container", () => ({
+  container: {
+    resolve: vi.fn(() => mockStatsService),
   },
 }));
+
+import statsRouter from "./stats";
 
 const app = express();
 app.use("/stats", statsRouter);
@@ -24,12 +28,12 @@ describe("GET /stats", () => {
     const mockStats = [
       { username: "user1", total_out: 200, games_count: 1, total_in: 100 },
     ];
-    StatsService.getFilteredStats.mockReturnValue(mockStats);
+    mockStatsService.getFilteredStats.mockReturnValue(mockStats);
 
     const res = await request(app).get("/stats?chatId=123");
     expect(res.status).toBe(200);
     expect(res.body).toEqual(mockStats);
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
+    expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(
       123,
       undefined,
       undefined,
@@ -38,7 +42,7 @@ describe("GET /stats", () => {
 
   it("передаёт параметр filter", async () => {
     await request(app).get("/stats?chatId=123&filter=2024");
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
+    expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(
       123,
       "2024",
       undefined,
@@ -47,7 +51,7 @@ describe("GET /stats", () => {
 
   it("передаёт параметр platform", async () => {
     await request(app).get("/stats?chatId=123&platform=vk");
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
+    expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(
       123,
       undefined,
       "vk",
@@ -55,7 +59,7 @@ describe("GET /stats", () => {
   });
 
   it("обрабатывает ошибки сервиса", async () => {
-    StatsService.getFilteredStats.mockImplementation(() => {
+    mockStatsService.getFilteredStats.mockImplementation(() => {
       throw new Error("DB error");
     });
     const res = await request(app).get("/stats?chatId=123");

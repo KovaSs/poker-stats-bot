@@ -1,1 +1,1 @@
-export * from "./game.repository";
+export { GameRepository } from "./game.repository";

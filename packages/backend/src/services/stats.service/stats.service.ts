@@ -1,3 +1,5 @@
+import { inject, injectable } from "tsyringe";
+
 import { TransactionRepository, UserRepository } from "@/db/repositories";
 import { logger } from "@/config/logger";
 
@@ -21,12 +23,18 @@ function buildFilter(filter?: string | "all"): Filter {
   return { sinceDate };
 }
 
-export const StatsService = {
+@injectable()
+export class StatsService {
+  constructor(
+    @inject(TransactionRepository) private readonly transactionRepository: TransactionRepository,
+    @inject(UserRepository) private readonly userRepository: UserRepository,
+  ) {}
+
   recalcStats(): void {
     logger.info("[StatsService] Пересчёт статистики...");
-    UserRepository.clear();
+    this.userRepository.clear();
 
-    const rows = TransactionRepository.getGroupedByUsernameAndGame();
+    const rows = this.transactionRepository.getGroupedByUsernameAndGame();
 
     const userMap = new Map<
       string,
@@ -53,11 +61,11 @@ export const StatsService = {
       }),
     );
 
-    UserRepository.insertMany(usersToInsert);
+    this.userRepository.insertMany(usersToInsert);
     logger.info(
       `[StatsService] Пересчёт завершён, обработано пользователей: ${usersToInsert.length}`,
     );
-  },
+  }
 
   getFilteredScores(
     chatId?: number,
@@ -67,19 +75,19 @@ export const StatsService = {
     const f = buildFilter(filter);
     f.platform = platform;
     if (f.all) {
-      return TransactionRepository.getFilteredScores(chatId, { platform });
+      return this.transactionRepository.getFilteredScores(chatId, { platform });
     }
     if (f.year) {
-      return TransactionRepository.getFilteredScores(chatId, {
+      return this.transactionRepository.getFilteredScores(chatId, {
         year: f.year,
         platform,
       });
     }
-    return TransactionRepository.getFilteredScores(chatId, {
+    return this.transactionRepository.getFilteredScores(chatId, {
       sinceDate: f.sinceDate,
       platform,
     });
-  },
+  }
 
   getFilteredStats(
     chatId?: number,
@@ -89,21 +97,21 @@ export const StatsService = {
     const f = buildFilter(filter);
     f.platform = platform;
     if (f.all) {
-      return TransactionRepository.getFilteredStats(chatId, { platform });
+      return this.transactionRepository.getFilteredStats(chatId, { platform });
     }
     if (f.year) {
-      return TransactionRepository.getFilteredStats(chatId, {
+      return this.transactionRepository.getFilteredStats(chatId, {
         year: f.year,
         platform,
       });
     }
-    return TransactionRepository.getFilteredStats(chatId, {
+    return this.transactionRepository.getFilteredStats(chatId, {
       sinceDate: f.sinceDate,
       platform,
     });
-  },
+  }
 
   getAvailableYears(chatId?: number, platform?: string): string[] {
-    return TransactionRepository.getDistinctYears(chatId, platform);
-  },
-};
+    return this.transactionRepository.getDistinctYears(chatId, platform);
+  }
+}

@@ -1,4 +1,4 @@
-import type { CommandResult } from "./types";
+import type { CommandResult } from "../types";
 
 export function formatStatsTitle(filter?: string): string {
   let title = "📊 Статистика участников";

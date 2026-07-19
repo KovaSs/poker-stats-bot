@@ -41,41 +41,41 @@ export const menuCallback: CallbackHandler = async (ctx) => {
   const data = (ctx.callbackQuery as { data?: string } | undefined)?.data;
 
   if (!data) {
-    console.log("❌ No data in callbackQuery");
+    logger.warn("❌ No data in callbackQuery");
     return;
   }
 
   await ctx.answerCbQuery();
 
   const chatId = ctx.chat!.id;
-  console.log("📌 chatId:", chatId);
+  logger.info({ chatId }, "menuCallback");
 
   try {
     // Сначала отправляем новое сообщение, потом удаляем меню
     switch (data) {
       case "menu_stats":
-        console.log("📊 Calling sendStatsPeriodKeyboard");
+        logger.info("menuCallback: stats");
         await sendStatsPeriodKeyboard(ctx, chatId);
         break;
       case "menu_top":
-        console.log("🏆 Calling sendTopPeriodKeyboard");
+        logger.info("menuCallback: top");
         await sendTopPeriodKeyboard(ctx, chatId);
         break;
       case "menu_help":
         await sendHelpMessage(ctx);
         break;
       default:
-        console.log("⚠️ Unknown menu callback:", data);
+        logger.warn({ data }, "Unknown menu callback");
     }
 
     // Удаляем меню после отправки ответа
     try {
       await ctx.deleteMessage();
     } catch (e) {
-      console.log("⚠️ Could not delete menu message:", e);
+      logger.warn({ error: e }, "Could not delete menu message");
     }
   } catch (error) {
-    console.error("❌ Error in menuCallback:", error);
+    logger.error({ error }, "Error in menuCallback");
     await ctx.reply("❌ Произошла ошибка. Попробуйте позже.");
   }
 };

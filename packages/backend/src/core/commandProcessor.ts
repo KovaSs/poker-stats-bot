@@ -1,1 +1,0 @@
-export { processCommand } from "./statsPresenter";

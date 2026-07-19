@@ -1,3 +1,5 @@
+import { injectable } from "tsyringe";
+
 import { logger } from "@/config/logger";
 import { getDB } from "@/db/connection";
 
@@ -38,7 +40,8 @@ function buildParams(
   return { params, sql };
 }
 
-export const TransactionRepository = {
+@injectable()
+export class TransactionRepository {
   getFilteredStats(
     chatId?: number,
     filter?: { year?: string; sinceDate?: string; platform?: string },
@@ -70,7 +73,7 @@ export const TransactionRepository = {
     }[];
     logger.info(`[DB] getFilteredStats: получено ${rows.length} записей`);
     return rows;
-  },
+  }
 
   getFilteredScores(
     chatId?: number,
@@ -95,7 +98,7 @@ export const TransactionRepository = {
     }[];
     logger.info(`[DB] getFilteredScores: получено ${rows.length} записей`);
     return rows;
-  },
+  }
 
   getDistinctYears(chatId?: number, platform?: string): string[] {
     let sql = `
@@ -120,7 +123,7 @@ export const TransactionRepository = {
     const stmt = getDB().prepare(sql);
     const rows = stmt.all(...params) as { year: string }[];
     return rows.map((row) => row.year);
-  },
+  }
 
   getGroupedByUsernameAndGame(): {
     username: string;
@@ -141,7 +144,7 @@ export const TransactionRepository = {
       total_in: number;
       game_id: number;
     }[];
-  },
+  }
 
   add(
     gameId: number,
@@ -157,11 +160,12 @@ export const TransactionRepository = {
       `[DB] addTransaction: ${username} +${amount} (${type}), lastID: ${info.lastInsertRowid}`,
     );
     return Number(info.lastInsertRowid);
-  },
+  }
+
   deleteByGameId(gameId: number): number {
     const stmt = getDB().prepare(`DELETE FROM transactions WHERE game_id = ?`);
     const info = stmt.run(gameId);
     logger.info(`[DB] Удалено транзакций для игры ${gameId}: ${info.changes}`);
     return info.changes;
-  },
-};
+  }
+}

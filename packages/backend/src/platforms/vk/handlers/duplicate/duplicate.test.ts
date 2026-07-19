@@ -15,6 +15,14 @@ vi.mock("@/db/repositories", () => ({
     updateCommunityMessageId: vi.fn(),
     findById: vi.fn(),
   },
+  TransactionRepository: class {},
+  UserRepository: class {},
+}));
+
+vi.mock("@/di/container", () => ({
+  container: {
+    resolve: vi.fn(),
+  },
 }));
 
 vi.mock("@/config/logger", () => ({

@@ -9,6 +9,8 @@ vi.mock("@/db/connection", () => ({
   getDB: vi.fn(),
 }));
 
+const txRepo = new TransactionRepository();
+
 describe("TransactionRepository", () => {
   let testDB: Database.Database;
 
@@ -39,14 +41,13 @@ describe("TransactionRepository", () => {
 
   describe("add", () => {
     it("добавляет транзакцию и возвращает id", () => {
-      // Сначала создаём игру, чтобы внешний ключ не нарушался
       const gameStmt = testDB.prepare(
         `INSERT INTO games (chat_id, message_id, game_date) VALUES (?, ?, ?)`,
       );
       const gameInfo = gameStmt.run(123, 456, "2026-03-27");
       const gameId = Number(gameInfo.lastInsertRowid);
 
-      const id = TransactionRepository.add(gameId, "user1", 100, "in");
+      const id = txRepo.add(gameId, "user1", 100, "in");
       expect(id).toBe(1);
 
       const row = testDB
@@ -69,11 +70,10 @@ describe("TransactionRepository", () => {
       const gameInfo = gameStmt.run(123, 456);
       const gameId = Number(gameInfo.lastInsertRowid);
 
-      // Добавляем две транзакции
-      TransactionRepository.add(gameId, "user1", 100, "in");
-      TransactionRepository.add(gameId, "user2", 200, "out");
+      txRepo.add(gameId, "user1", 100, "in");
+      txRepo.add(gameId, "user2", 200, "out");
 
-      const deleted = TransactionRepository.deleteByGameId(gameId);
+      const deleted = txRepo.deleteByGameId(gameId);
       expect(deleted).toBe(2);
 
       const remaining = testDB
@@ -93,15 +93,13 @@ describe("TransactionRepository", () => {
       const gameInfo2 = gameStmt.run(123, 457);
       const gameId2 = Number(gameInfo2.lastInsertRowid);
 
-      // Игра 1: user1: in=100, out=50; user2: in=20
-      TransactionRepository.add(gameId1, "user1", 100, "in");
-      TransactionRepository.add(gameId1, "user1", 50, "out");
-      TransactionRepository.add(gameId1, "user2", 20, "in");
+      txRepo.add(gameId1, "user1", 100, "in");
+      txRepo.add(gameId1, "user1", 50, "out");
+      txRepo.add(gameId1, "user2", 20, "in");
 
-      // Игра 2: user1: in=30
-      TransactionRepository.add(gameId2, "user1", 30, "in");
+      txRepo.add(gameId2, "user1", 30, "in");
 
-      const grouped = TransactionRepository.getGroupedByUsernameAndGame();
+      const grouped = txRepo.getGroupedByUsernameAndGame();
 
       expect(grouped).toHaveLength(3);
       expect(grouped).toContainEqual({
@@ -135,21 +133,17 @@ describe("TransactionRepository", () => {
       const gameInfo2 = gameStmt.run(123, 457, "2025-06-20");
       const gameId2 = Number(gameInfo2.lastInsertRowid);
 
-      TransactionRepository.add(gameId1, "user1", 100, "in");
-      TransactionRepository.add(gameId1, "user1", 50, "out");
-      TransactionRepository.add(gameId1, "user2", 30, "in");
+      txRepo.add(gameId1, "user1", 100, "in");
+      txRepo.add(gameId1, "user1", 50, "out");
+      txRepo.add(gameId1, "user2", 30, "in");
 
-      TransactionRepository.add(gameId2, "user1", 20, "in");
-      TransactionRepository.add(gameId2, "user2", 10, "out");
+      txRepo.add(gameId2, "user1", 20, "in");
+      txRepo.add(gameId2, "user2", 10, "out");
     });
 
     it("возвращает статистику без фильтрации", () => {
-      const stats = TransactionRepository.getFilteredStats(123);
+      const stats = txRepo.getFilteredStats(123);
       expect(stats).toHaveLength(2);
-      // Проверяем порядок по разнице (out - in) DESC
-      // user1: total_in=120, total_out=50 -> разница -70 (убыток)
-      // user2: total_in=30, total_out=10 -> разница -20 (убыток)
-      // Ожидаем user2 выше (меньший убыток)
       expect(stats[0].username).toBe("user2");
       expect(stats[0].total_in).toBe(30);
       expect(stats[0].total_out).toBe(10);
@@ -161,14 +155,10 @@ describe("TransactionRepository", () => {
     });
 
     it("фильтрует по году", () => {
-      const stats2024 = TransactionRepository.getFilteredStats(123, {
+      const stats2024 = txRepo.getFilteredStats(123, {
         year: "2024",
       });
       expect(stats2024).toHaveLength(2);
-      // для 2024 года:
-      // user2: in=30, out=0 → diff = -30
-      // user1: in=100, out=50 → diff = -50
-      // сортировка diff DESC: сначала user2 (-30), потом user1 (-50)
       expect(stats2024[0].username).toBe("user2");
       expect(stats2024[0].total_in).toBe(30);
       expect(stats2024[0].total_out).toBe(0);
@@ -178,14 +168,10 @@ describe("TransactionRepository", () => {
       expect(stats2024[1].total_out).toBe(50);
       expect(stats2024[1].games_count).toBe(1);
 
-      const stats2025 = TransactionRepository.getFilteredStats(123, {
+      const stats2025 = txRepo.getFilteredStats(123, {
         year: "2025",
       });
       expect(stats2025).toHaveLength(2);
-      // для 2025 года:
-      // user2: in=0, out=10 → diff = +10
-      // user1: in=20, out=0 → diff = -20
-      // сортировка diff DESC: сначала user2 (+10), потом user1 (-20)
       expect(stats2025[0].username).toBe("user2");
       expect(stats2025[0].total_in).toBe(0);
       expect(stats2025[0].total_out).toBe(10);
@@ -198,12 +184,8 @@ describe("TransactionRepository", () => {
 
     it('фильтрует по дате "с"', () => {
       const sinceDate = "2025-01-01";
-      const stats = TransactionRepository.getFilteredStats(123, { sinceDate });
+      const stats = txRepo.getFilteredStats(123, { sinceDate });
       expect(stats).toHaveLength(2);
-      // должны попасть только игры с game_date >= sinceDate (только игра2, 2025-06-20)
-      // user2: in=0, out=10 → diff = +10
-      // user1: in=20, out=0 → diff = -20
-      // сортировка diff DESC: сначала user2 (+10), потом user1 (-20)
       expect(stats[0].username).toBe("user2");
       expect(stats[0].total_in).toBe(0);
       expect(stats[0].total_out).toBe(10);
@@ -225,18 +207,16 @@ describe("TransactionRepository", () => {
       const gameInfo2 = gameStmt.run(123, 457, "2025-06-20");
       const gameId2 = Number(gameInfo2.lastInsertRowid);
 
-      TransactionRepository.add(gameId1, "user1", 100, "in");
-      TransactionRepository.add(gameId1, "user1", 50, "out");
-      TransactionRepository.add(gameId1, "user2", 30, "in");
+      txRepo.add(gameId1, "user1", 100, "in");
+      txRepo.add(gameId1, "user1", 50, "out");
+      txRepo.add(gameId1, "user2", 30, "in");
 
-      TransactionRepository.add(gameId2, "user1", 20, "in");
-      TransactionRepository.add(gameId2, "user2", 10, "out");
+      txRepo.add(gameId2, "user1", 20, "in");
+      txRepo.add(gameId2, "user2", 10, "out");
     });
 
     it("возвращает топ по разнице (score = total_out - total_in)", () => {
-      const scores = TransactionRepository.getFilteredScores(123);
-      // user1: (50+0) - (100+20) = -70
-      // user2: (0+10) - (30+0) = -20
+      const scores = txRepo.getFilteredScores(123);
       expect(scores).toEqual([
         { username: "user2", score: -20 },
         { username: "user1", score: -70 },
@@ -244,26 +224,26 @@ describe("TransactionRepository", () => {
     });
 
     it("фильтрует по году", () => {
-      const scores2024 = TransactionRepository.getFilteredScores(123, {
+      const scores2024 = txRepo.getFilteredScores(123, {
         year: "2024",
       });
       expect(scores2024).toEqual([
-        { username: "user2", score: -30 }, // только out? нет out? wait: user2 in=30, out=0 => -30
-        { username: "user1", score: -50 }, // in=100 out=50 => -50
+        { username: "user2", score: -30 },
+        { username: "user1", score: -50 },
       ]);
 
-      const scores2025 = TransactionRepository.getFilteredScores(123, {
+      const scores2025 = txRepo.getFilteredScores(123, {
         year: "2025",
       });
       expect(scores2025).toEqual([
-        { username: "user2", score: 10 }, // out=10, in=0 => +10
-        { username: "user1", score: -20 }, // in=20 out=0 => -20
+        { username: "user2", score: 10 },
+        { username: "user1", score: -20 },
       ]);
     });
 
     it('фильтрует по дате "с"', () => {
       const sinceDate = "2025-01-01";
-      const scores = TransactionRepository.getFilteredScores(123, {
+      const scores = txRepo.getFilteredScores(123, {
         sinceDate,
       });
       expect(scores).toEqual([

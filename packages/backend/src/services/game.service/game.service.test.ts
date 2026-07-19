@@ -1,37 +1,33 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-import { TransactionRepository } from "@/db/repositories/transaction.repository";
-import { GameRepository } from "@/db/repositories/game.repository";
-
 import { ParsedTransaction } from "../parser.service";
-import { StatsService } from "../stats.service";
 
 import { GameService } from "./game.service";
 
-vi.mock("@/db/repositories/game.repository", () => ({
-  GameRepository: {
+describe("GameService", () => {
+  const mockGameRepo = {
     deleteByChatAndMessage: vi.fn(),
     findByChatAndMessage: vi.fn(),
     updateDate: vi.fn(),
     create: vi.fn(),
     delete: vi.fn(),
-  },
-}));
+  };
 
-vi.mock("@/db/repositories/transaction.repository", () => ({
-  TransactionRepository: {
+  const mockTxRepo = {
     deleteByGameId: vi.fn(),
     add: vi.fn(),
-  },
-}));
+  };
 
-vi.mock("../stats.service", () => ({
-  StatsService: {
+  const mockStatsSvc = {
     recalcStats: vi.fn(),
-  },
-}));
+  };
 
-describe("GameService", () => {
+  const gameService = new GameService(
+    mockGameRepo as never,
+    mockTxRepo as never,
+    mockStatsSvc as never,
+  );
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -39,19 +35,18 @@ describe("GameService", () => {
   describe("createGame", () => {
     it("создаёт игру и возвращает gameId", () => {
       const mockGameId = 42;
-      GameRepository.create.mockReturnValue(mockGameId);
+      mockGameRepo.create.mockReturnValue(mockGameId);
 
-      const result = GameService.createGame(123, 456, "2026-03-28");
+      const result = gameService.createGame(123, 456, "2026-03-28");
 
-      expect(GameRepository.create).toHaveBeenCalledWith(
+      expect(mockGameRepo.create).toHaveBeenCalledWith(
         123,
         456,
         "2026-03-28",
         "telegram",
       );
       expect(result).toBe(mockGameId);
-      // recalcStats не должен вызываться при создании
-      expect(StatsService.recalcStats).not.toHaveBeenCalled();
+      expect(mockStatsSvc.recalcStats).not.toHaveBeenCalled();
     });
   });
 
@@ -63,17 +58,17 @@ describe("GameService", () => {
         { username: "user2", amount: 200, type: "out" },
       ];
 
-      const savedCount = GameService.addTransactions(gameId, transactions);
+      const savedCount = gameService.addTransactions(gameId, transactions);
 
-      expect(TransactionRepository.add).toHaveBeenCalledTimes(2);
-      expect(TransactionRepository.add).toHaveBeenNthCalledWith(
+      expect(mockTxRepo.add).toHaveBeenCalledTimes(2);
+      expect(mockTxRepo.add).toHaveBeenNthCalledWith(
         1,
         gameId,
         "user1",
         100,
         "in",
       );
-      expect(TransactionRepository.add).toHaveBeenNthCalledWith(
+      expect(mockTxRepo.add).toHaveBeenNthCalledWith(
         2,
         gameId,
         "user2",
@@ -81,16 +76,16 @@ describe("GameService", () => {
         "out",
       );
       expect(savedCount).toBe(2);
-      expect(StatsService.recalcStats).toHaveBeenCalledTimes(1);
+      expect(mockStatsSvc.recalcStats).toHaveBeenCalledTimes(1);
     });
 
     it("корректно обрабатывает пустой массив транзакций", () => {
       const gameId = 1;
-      const savedCount = GameService.addTransactions(gameId, []);
+      const savedCount = gameService.addTransactions(gameId, []);
 
-      expect(TransactionRepository.add).not.toHaveBeenCalled();
+      expect(mockTxRepo.add).not.toHaveBeenCalled();
       expect(savedCount).toBe(0);
-      expect(StatsService.recalcStats).toHaveBeenCalledTimes(1);
+      expect(mockStatsSvc.recalcStats).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -102,15 +97,14 @@ describe("GameService", () => {
         { username: "user1", amount: 50, type: "in" },
       ];
 
-      // Шпионим за addTransactions, чтобы проверить его вызов
-      const addSpy = vi.spyOn(GameService, "addTransactions");
+      const addSpy = vi.spyOn(gameService, "addTransactions");
 
-      const result = GameService.updateGame(gameId, newDate, newTransactions);
+      const result = gameService.updateGame(gameId, newDate, newTransactions);
 
-      expect(GameRepository.updateDate).toHaveBeenCalledWith(gameId, newDate);
-      expect(TransactionRepository.deleteByGameId).toHaveBeenCalledWith(gameId);
+      expect(mockGameRepo.updateDate).toHaveBeenCalledWith(gameId, newDate);
+      expect(mockTxRepo.deleteByGameId).toHaveBeenCalledWith(gameId);
       expect(addSpy).toHaveBeenCalledWith(gameId, newTransactions);
-      expect(result).toBe(1); // addTransactions вернёт 1
+      expect(result).toBe(1);
 
       addSpy.mockRestore();
     });
@@ -127,33 +121,33 @@ describe("GameService", () => {
         created_at: "",
         id: 5,
       };
-      GameRepository.findByChatAndMessage.mockReturnValue(mockGame);
-      TransactionRepository.deleteByGameId.mockReturnValue(3); // количество удалённых транзакций
+      mockGameRepo.findByChatAndMessage.mockReturnValue(mockGame);
+      mockTxRepo.deleteByGameId.mockReturnValue(3);
 
-      const result = GameService.deleteGame(chatId, messageId);
+      const result = gameService.deleteGame(chatId, messageId);
 
-      expect(GameRepository.findByChatAndMessage).toHaveBeenCalledWith(
+      expect(mockGameRepo.findByChatAndMessage).toHaveBeenCalledWith(
         chatId,
         messageId,
       );
-      expect(TransactionRepository.deleteByGameId).toHaveBeenCalledWith(5);
-      expect(GameRepository.delete).toHaveBeenCalledWith(5);
-      expect(StatsService.recalcStats).toHaveBeenCalledTimes(1);
+      expect(mockTxRepo.deleteByGameId).toHaveBeenCalledWith(5);
+      expect(mockGameRepo.delete).toHaveBeenCalledWith(5);
+      expect(mockStatsSvc.recalcStats).toHaveBeenCalledTimes(1);
       expect(result).toBe(true);
     });
 
     it("возвращает false, если игра не найдена", () => {
-      GameRepository.findByChatAndMessage.mockReturnValue(null);
+      mockGameRepo.findByChatAndMessage.mockReturnValue(null);
 
-      const result = GameService.deleteGame(123, 456);
+      const result = gameService.deleteGame(123, 456);
 
-      expect(GameRepository.findByChatAndMessage).toHaveBeenCalledWith(
+      expect(mockGameRepo.findByChatAndMessage).toHaveBeenCalledWith(
         123,
         456,
       );
-      expect(TransactionRepository.deleteByGameId).not.toHaveBeenCalled();
-      expect(GameRepository.delete).not.toHaveBeenCalled();
-      expect(StatsService.recalcStats).not.toHaveBeenCalled();
+      expect(mockTxRepo.deleteByGameId).not.toHaveBeenCalled();
+      expect(mockGameRepo.delete).not.toHaveBeenCalled();
+      expect(mockStatsSvc.recalcStats).not.toHaveBeenCalled();
       expect(result).toBe(false);
     });
   });

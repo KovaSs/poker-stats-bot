@@ -1,3 +1,5 @@
+import { injectable } from "tsyringe";
+
 import { logger } from "@/config/logger";
 
 export interface ParsedTransaction {
@@ -15,7 +17,8 @@ function sanitizeUsername(username: string): string | null {
   return cleaned;
 }
 
-export const ParserService = {
+@injectable()
+export class ParserService {
   parseTransactions(lines: string[]): ParsedTransaction[] {
     let currentType: "in" | "out" | null = null;
     const transactions: ParsedTransaction[] = [];
@@ -58,7 +61,7 @@ export const ParserService = {
     }
 
     return transactions;
-  },
+  }
 
   extractGameDateFromText(text: string): string | null {
     const dateMatch = text.match(/game\s+(\d{2})\.(\d{2})\.(\d{4})/);
@@ -67,5 +70,5 @@ export const ParserService = {
       return `${year}-${month}-${day}`;
     }
     return null;
-  },
-};
+  }
+}
