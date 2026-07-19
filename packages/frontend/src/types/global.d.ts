@@ -11,9 +11,9 @@ declare global {
           source: string;
           scope: string;
         }) => void;
-        ConfigResponseMode: { Callback: string };
-        ConfigSource: { LOWCODE: string };
       };
+      ConfigResponseMode: { Callback: string };
+      ConfigSource: { LOWCODE: string };
       Auth: {
         login: () => Promise<{ code: string; device_id: string }>;
         exchangeCode: (code: string, deviceId: string) => Promise<{

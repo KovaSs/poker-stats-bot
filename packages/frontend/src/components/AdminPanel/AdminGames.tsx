@@ -21,11 +21,13 @@ import { useState } from "react";
 import { useAuth } from "../AuthProvider";
 
 interface Transaction {
-  type: "in" | "out";
+  id: number;
   username: string;
   amount: number;
-  id: number;
+  type: "in" | "out";
 }
+
+type TransactionInput = Omit<Transaction, "id">;
 
 interface Game {
   transactions: Transaction[];
@@ -61,7 +63,7 @@ export function AdminGames() {
         );
       }
     },
-    mutationFn: (data: { id: number; game_date?: string; transactions?: Transaction[] }) =>
+    mutationFn: (data: { id: number; game_date?: string; transactions?: TransactionInput[] }) =>
       fetch(`/api/admin/games/${data.id}`, {
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -155,7 +157,7 @@ export function AdminGames() {
             onChange={(e) => setEditDate(e.target.value)}
             fullWidth
             sx={{ mb: 2, mt: 1 }}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
 
           <Typography variant="subtitle2" sx={{ mb: 1 }}>Транзакции:</Typography>
