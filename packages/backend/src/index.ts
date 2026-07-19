@@ -1,5 +1,6 @@
 import { BOT_TOKEN, TELEGRAM_API_URL } from "@/config/env";
-import { setupBot } from "@/telegram/bot";
+import { setupBot } from "@/platforms/telegram/bot";
+import { initVKPlatform } from "@/platforms/vk";
 import { initDB } from "@/db/connection";
 import { logger } from "@/config/logger";
 
@@ -12,6 +13,8 @@ async function main() {
   logger.info("Bot started");
 
   startApiServer();
+
+  await initVKPlatform();
 
   process.once("SIGINT", () => bot.stop("SIGINT"));
   process.once("SIGTERM", () => bot.stop("SIGTERM"));

@@ -2,6 +2,9 @@ import { logger } from "@/config/logger";
 import { getDB } from "@/db/connection";
 
 export interface GameRow {
+  community_message_id?: number | null;
+  vk_wall_owner_id?: number | null;
+  vk_wall_post_id?: number | null;
   message_id: number | null;
   game_date: string | null;
   created_at: string;
@@ -28,15 +31,44 @@ export const GameRepository = {
     return null;
   },
 
-  create(chatId: number, messageId: number | null, gameDate?: string): number {
+  create(
+    chatId: number,
+    messageId: number | null,
+    gameDate?: string,
+    platform: string = "telegram",
+  ): number {
     const stmt = getDB().prepare(
-      `INSERT INTO games (chat_id, message_id, game_date) VALUES (?, ?, ?)`,
+      `INSERT INTO games (chat_id, message_id, game_date, platform) VALUES (?, ?, ?, ?)`,
     );
-    const info = stmt.run(chatId, messageId, gameDate || null);
+    const info = stmt.run(chatId, messageId, gameDate || null, platform);
     logger.info(
-      `[DB] createGame успешно, lastID: ${info.lastInsertRowid}, дата: ${gameDate || "не указана"}`,
+      `[DB] createGame успешно, lastID: ${info.lastInsertRowid}, дата: ${gameDate || "не указана"}, платформа: ${platform}`,
     );
     return Number(info.lastInsertRowid);
+  },
+
+  updateWallPostId(
+    id: number,
+    wallPostId: number,
+    wallOwnerId: number,
+  ): void {
+    const stmt = getDB().prepare(
+      `UPDATE games SET vk_wall_post_id = ?, vk_wall_owner_id = ? WHERE id = ?`,
+    );
+    stmt.run(wallPostId, wallOwnerId, id);
+    logger.info(
+      `[DB] Игра ${id}: привязан wall post ${wallPostId} (owner ${wallOwnerId})`,
+    );
+  },
+
+  updateCommunityMessageId(id: number, communityMessageId: number): void {
+    const stmt = getDB().prepare(
+      `UPDATE games SET community_message_id = ? WHERE id = ?`,
+    );
+    stmt.run(communityMessageId, id);
+    logger.info(
+      `[DB] Игра ${id}: привязан community message ${communityMessageId}`,
+    );
   },
 
   updateDate(id: number, gameDate: string): void {
@@ -56,5 +88,11 @@ export const GameRepository = {
     if (!game) return false;
     this.delete(game.id);
     return true;
+  },
+
+  findById(id: number): GameRow | null {
+    const stmt = getDB().prepare(`SELECT * FROM games WHERE id = ?`);
+    const row = stmt.get(id) as GameRow | undefined;
+    return row || null;
   },
 };

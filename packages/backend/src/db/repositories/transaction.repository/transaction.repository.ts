@@ -10,17 +10,46 @@ export interface TransactionRow {
   id: number;
 }
 
+function buildParams(
+  chatId?: number,
+  filter?: { year?: string; sinceDate?: string; platform?: string },
+): { sql: string; params: (string | number)[] } {
+  const params: (string | number)[] = [];
+  let sql = "";
+
+  if (chatId !== undefined) {
+    sql += ` AND g.chat_id = ?`;
+    params.push(chatId);
+  }
+
+  if (filter?.year) {
+    sql += ` AND g.game_date LIKE ?`;
+    params.push(`${filter.year}%`);
+  } else if (filter?.sinceDate) {
+    sql += ` AND g.game_date >= ?`;
+    params.push(filter.sinceDate);
+  }
+
+  if (filter?.platform) {
+    sql += ` AND g.platform = ?`;
+    params.push(filter.platform);
+  }
+
+  return { params, sql };
+}
+
 export const TransactionRepository = {
   getFilteredStats(
-    chatId: number,
-    filter?: { year?: string; sinceDate?: string },
+    chatId?: number,
+    filter?: { year?: string; sinceDate?: string; platform?: string },
   ): {
     username: string;
     total_in: number;
     total_out: number;
     games_count: number;
   }[] {
-    let sql = `
+    const { sql: filterSql, params } = buildParams(chatId, filter);
+    const sql = `
       SELECT
         t.username,
         COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0) as total_in,
@@ -28,19 +57,9 @@ export const TransactionRepository = {
         COUNT(DISTINCT t.game_id) as games_count
       FROM transactions t
       JOIN games g ON t.game_id = g.id
-      WHERE g.chat_id = ?
+      WHERE 1=1${filterSql}
+      GROUP BY t.username ORDER BY (total_out - total_in) DESC
     `;
-    const params: (string | number)[] = [chatId];
-
-    if (filter?.year) {
-      sql += ` AND g.game_date LIKE ?`;
-      params.push(`${filter.year}%`);
-    } else if (filter?.sinceDate) {
-      sql += ` AND g.game_date >= ?`;
-      params.push(filter.sinceDate);
-    }
-
-    sql += ` GROUP BY t.username ORDER BY (total_out - total_in) DESC`;
 
     const stmt = getDB().prepare(sql);
     const rows = stmt.all(...params) as {
@@ -54,29 +73,20 @@ export const TransactionRepository = {
   },
 
   getFilteredScores(
-    chatId: number,
-    filter?: { year?: string; sinceDate?: string },
+    chatId?: number,
+    filter?: { year?: string; sinceDate?: string; platform?: string },
   ): { username: string; score: number }[] {
-    let sql = `
+    const { sql: filterSql, params } = buildParams(chatId, filter);
+    const sql = `
       SELECT
         t.username,
         (COALESCE(SUM(CASE WHEN t.type = 'out' THEN t.amount ELSE 0 END), 0) -
           COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0)) as score
       FROM transactions t
       JOIN games g ON t.game_id = g.id
-      WHERE g.chat_id = ?
+      WHERE 1=1${filterSql}
+      GROUP BY t.username ORDER BY score DESC
     `;
-    const params: (string | number)[] = [chatId];
-
-    if (filter?.year) {
-      sql += ` AND g.game_date LIKE ?`;
-      params.push(`${filter.year}%`);
-    } else if (filter?.sinceDate) {
-      sql += ` AND g.game_date >= ?`;
-      params.push(filter.sinceDate);
-    }
-
-    sql += ` GROUP BY t.username ORDER BY score DESC`;
 
     const stmt = getDB().prepare(sql);
     const rows = stmt.all(...params) as {
@@ -85,6 +95,31 @@ export const TransactionRepository = {
     }[];
     logger.info(`[DB] getFilteredScores: получено ${rows.length} записей`);
     return rows;
+  },
+
+  getDistinctYears(chatId?: number, platform?: string): string[] {
+    let sql = `
+      SELECT DISTINCT strftime('%Y', game_date) as year
+      FROM games
+      WHERE game_date IS NOT NULL
+    `;
+    const params: (string | number)[] = [];
+
+    if (chatId !== undefined) {
+      sql += ` AND chat_id = ?`;
+      params.push(chatId);
+    }
+
+    if (platform) {
+      sql += ` AND platform = ?`;
+      params.push(platform);
+    }
+
+    sql += ` ORDER BY year DESC`;
+
+    const stmt = getDB().prepare(sql);
+    const rows = stmt.all(...params) as { year: string }[];
+    return rows.map((row) => row.year);
   },
 
   getGroupedByUsernameAndGame(): {
@@ -122,17 +157,6 @@ export const TransactionRepository = {
       `[DB] addTransaction: ${username} +${amount} (${type}), lastID: ${info.lastInsertRowid}`,
     );
     return Number(info.lastInsertRowid);
-  },
-
-  getDistinctYears(chatId: number): string[] {
-    const stmt = getDB().prepare(`
-      SELECT DISTINCT strftime('%Y', game_date) as year
-      FROM games
-      WHERE chat_id = ? AND game_date IS NOT NULL
-      ORDER BY year DESC
-    `);
-    const rows = stmt.all(chatId) as { year: string }[];
-    return rows.map((row) => row.year);
   },
   deleteByGameId(gameId: number): number {
     const stmt = getDB().prepare(`DELETE FROM transactions WHERE game_id = ?`);

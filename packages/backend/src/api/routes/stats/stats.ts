@@ -8,6 +8,7 @@ router.get("/", (req, res) => {
   try {
     const filter = req.query.filter as string | undefined;
     const chatIdParam = req.query.chatId as string | undefined;
+    const platform = req.query.platform as string | undefined;
 
     if (!chatIdParam) {
       return res.status(400).json({ error: "chatId is required" });
@@ -17,7 +18,7 @@ router.get("/", (req, res) => {
       return res.status(400).json({ error: "Invalid chatId" });
     }
 
-    const stats = StatsService.getFilteredStats(chatId, filter);
+    const stats = StatsService.getFilteredStats(chatId, filter, platform);
     res.json(stats);
   } catch (error) {
     console.error("[API] /stats error:", error);

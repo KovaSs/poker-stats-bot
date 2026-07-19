@@ -1,7 +1,12 @@
 import { TransactionRepository, UserRepository } from "@/db/repositories";
 import { logger } from "@/config/logger";
 
-export type Filter = { year?: string; all?: boolean; sinceDate?: string };
+export type Filter = {
+  year?: string;
+  all?: boolean;
+  sinceDate?: string;
+  platform?: string;
+};
 
 function buildFilter(filter?: string | "all"): Filter {
   if (filter === "all") {
@@ -10,7 +15,6 @@ function buildFilter(filter?: string | "all"): Filter {
   if (filter && /^\d{4}$/.test(filter)) {
     return { year: filter };
   }
-  // по умолчанию последний год
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const sinceDate = oneYearAgo.toISOString().slice(0, 10);
@@ -20,10 +24,8 @@ function buildFilter(filter?: string | "all"): Filter {
 export const StatsService = {
   recalcStats(): void {
     logger.info("[StatsService] Пересчёт статистики...");
-    // Очищаем таблицу users
     UserRepository.clear();
 
-    // Получаем агрегированные данные по пользователям и играм
     const rows = TransactionRepository.getGroupedByUsernameAndGame();
 
     const userMap = new Map<
@@ -41,7 +43,6 @@ export const StatsService = {
       user.games.add(row.game_id);
     }
 
-    // Подготовка данных для вставки
     const usersToInsert = Array.from(userMap.entries()).map(
       ([username, data]) => ({
         game_ids: JSON.stringify(Array.from(data.games)),
@@ -58,33 +59,51 @@ export const StatsService = {
     );
   },
 
-  getFilteredScores(chatId: number, filter?: string | "all") {
+  getFilteredScores(
+    chatId?: number,
+    filter?: string | "all",
+    platform?: string,
+  ) {
     const f = buildFilter(filter);
+    f.platform = platform;
     if (f.all) {
-      return TransactionRepository.getFilteredScores(chatId);
+      return TransactionRepository.getFilteredScores(chatId, { platform });
     }
     if (f.year) {
-      return TransactionRepository.getFilteredScores(chatId, { year: f.year });
+      return TransactionRepository.getFilteredScores(chatId, {
+        year: f.year,
+        platform,
+      });
     }
     return TransactionRepository.getFilteredScores(chatId, {
       sinceDate: f.sinceDate,
+      platform,
     });
   },
 
-  getFilteredStats(chatId: number, filter?: string | "all") {
+  getFilteredStats(
+    chatId?: number,
+    filter?: string | "all",
+    platform?: string,
+  ) {
     const f = buildFilter(filter);
+    f.platform = platform;
     if (f.all) {
-      return TransactionRepository.getFilteredStats(chatId);
+      return TransactionRepository.getFilteredStats(chatId, { platform });
     }
     if (f.year) {
-      return TransactionRepository.getFilteredStats(chatId, { year: f.year });
+      return TransactionRepository.getFilteredStats(chatId, {
+        year: f.year,
+        platform,
+      });
     }
     return TransactionRepository.getFilteredStats(chatId, {
       sinceDate: f.sinceDate,
+      platform,
     });
   },
 
-  getAvailableYears(chatId: number): string[] {
-    return TransactionRepository.getDistinctYears(chatId);
+  getAvailableYears(chatId?: number, platform?: string): string[] {
+    return TransactionRepository.getDistinctYears(chatId, platform);
   },
 };

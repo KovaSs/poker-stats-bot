@@ -40,6 +40,11 @@ dotenv.config({ path: envPath });
 export const BOT_TOKEN = process.env.BOT_TOKEN!;
 export const TELEGRAM_API_URL = process.env.TELEGRAM_API_URL!;
 export const API_PORT = parseInt(process.env.API_PORT || "3000", 10);
+export const VK_ACCESS_TOKEN = process.env.VK_ACCESS_TOKEN || "";
+export const VK_GROUP_ID = process.env.VK_GROUP_ID || "";
+export const VK_COMMUNITY_CHAT_ID = process.env.VK_COMMUNITY_CHAT_ID
+  ? Number(process.env.VK_COMMUNITY_CHAT_ID)
+  : null;
 
 if (!BOT_TOKEN) {
   logger.error(

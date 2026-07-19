@@ -1,0 +1,1 @@
+export { handleVKMessage } from "./message";

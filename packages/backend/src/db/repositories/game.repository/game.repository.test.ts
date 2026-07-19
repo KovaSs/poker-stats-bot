@@ -20,6 +20,7 @@ describe("GameRepository", () => {
         chat_id INTEGER,
         message_id INTEGER,
         game_date TEXT,
+        platform TEXT DEFAULT 'telegram',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);

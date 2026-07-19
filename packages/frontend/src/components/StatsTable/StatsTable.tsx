@@ -65,7 +65,7 @@ export const StatsTable = ({ stats }: StatsTableProps) => {
             );
           })}
           {/* Итоговая строка */}
-          <TableRow sx={{ fontWeight: "bold", "& td": { borderTop: 2 } }}>
+          <TableRow sx={{ "& td": { borderTop: 2 }, fontWeight: "bold" }}>
             <TableCell colSpan={2}>Итого</TableCell>
             <TableCell align="right" />
             <TableCell align="right">{totalIn}</TableCell>

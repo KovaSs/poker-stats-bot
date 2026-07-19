@@ -45,9 +45,9 @@ export const GameService = {
     chatId: number,
     messageId: number | null,
     gameDate?: string,
+    platform: string = "telegram",
   ): number {
-    const gameId = GameRepository.create(chatId, messageId, gameDate);
-    // Статистика будет пересчитана после добавления транзакций
+    const gameId = GameRepository.create(chatId, messageId, gameDate, platform);
     return gameId;
   },
 };

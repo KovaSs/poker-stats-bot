@@ -1,34 +1,15 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { Context } from "telegraf";
 
-import { GameService, ParserService } from "@/services";
-import { GameRepository } from "@/db/repositories";
+import { processGameMessage } from "@/core";
 import { logger } from "@/config/logger";
 
 import * as middlewares from "../../middlewares";
 
 import * as game from "./game";
 
-vi.mock("@/services", () => ({
-  GameService: {
-    addTransactions: vi.fn(),
-    createGame: vi.fn(),
-    updateGame: vi.fn(),
-    deleteGame: vi.fn(),
-  },
-  ParserService: {
-    extractGameDateFromText: vi.fn(),
-    parseTransactions: vi.fn(),
-  },
-  StatsService: {
-    recalcStats: vi.fn(),
-  },
-}));
-
-vi.mock("@/db/repositories", () => ({
-  GameRepository: {
-    findByChatAndMessage: vi.fn(),
-  },
+vi.mock("@/core", () => ({
+  processGameMessage: vi.fn(),
 }));
 
 vi.mock("../../middlewares", () => ({
@@ -78,25 +59,22 @@ describe("game handlers", () => {
           message_id: 111,
         },
       });
-      ParserService.extractGameDateFromText.mockReturnValue("2025-02-16");
-      ParserService.parseTransactions.mockReturnValue([
-        { username: "User", amount: 500, type: "in" },
-      ]);
-      GameService.createGame.mockReturnValue(42);
-      GameService.addTransactions.mockReturnValue(1);
+      (processGameMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+        reply: "✅ Игра от 2025-02-16 успешно создана. Добавлено записей: 1",
+        ok: true,
+      });
 
       await game.textHandler(ctx as Context);
 
-      expect(ParserService.extractGameDateFromText).toHaveBeenCalled();
-      expect(ParserService.parseTransactions).toHaveBeenCalled();
-      expect(GameService.createGame).toHaveBeenCalledWith(
-        12345,
-        111,
-        "2025-02-16",
+      expect(processGameMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: expect.stringContaining("game"),
+          platform: "telegram",
+          messageId: 111,
+          chatId: 12345,
+        }),
       );
-      expect(GameService.addTransactions).toHaveBeenCalledWith(42, [
-        { username: "User", amount: 500, type: "in" },
-      ]);
+      expect(middlewares.deleteCommandMessage).toHaveBeenCalledWith(ctx);
       expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
         ctx,
         expect.stringContaining("✅ Игра от 2025-02-16 успешно создана"),
@@ -114,9 +92,7 @@ describe("game handlers", () => {
 
       await game.textHandler(ctx as Context);
 
-      // Проверяем, что никакие сервисы не вызывались и ответ не отправлялся
-      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
-      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(processGameMessage).not.toHaveBeenCalled();
       expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
     });
 
@@ -131,29 +107,8 @@ describe("game handlers", () => {
 
       await game.textHandler(ctx as Context);
 
-      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
-      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(processGameMessage).not.toHaveBeenCalled();
       expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
-    });
-
-    it("отвечает сообщением об отсутствии транзакций при упоминании и game", async () => {
-      const ctx = createMockContext({
-        message: {
-          entities: [{ type: "mention", offset: 0, length: 8 }],
-          text: "@testbot game 16.02.2025\nПросто текст",
-          message_id: 444,
-        },
-      });
-      ParserService.extractGameDateFromText.mockReturnValue("2025-02-16");
-      ParserService.parseTransactions.mockReturnValue([]);
-
-      await game.textHandler(ctx as Context);
-
-      expect(GameService.createGame).not.toHaveBeenCalled();
-      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
-        ctx,
-        expect.stringContaining("Не найдено ни одной корректной записи"),
-      );
     });
 
     it("обрабатывает ошибку и отправляет сообщение об ошибке", async () => {
@@ -165,9 +120,9 @@ describe("game handlers", () => {
         },
       });
       const testError = new Error("Test error");
-      ParserService.extractGameDateFromText.mockImplementation(() => {
-        throw testError;
-      });
+      (processGameMessage as ReturnType<typeof vi.fn>).mockRejectedValue(
+        testError,
+      );
 
       await game.textHandler(ctx as Context);
 
@@ -178,7 +133,6 @@ describe("game handlers", () => {
         ctx,
         "❌ Произошла ошибка при обработке сообщения.",
       );
-      expect(GameService.createGame).not.toHaveBeenCalled();
     });
   });
 
@@ -191,21 +145,20 @@ describe("game handlers", () => {
           message_id: 555,
         },
       });
-      ParserService.extractGameDateFromText.mockReturnValue("2026-03-20");
-      ParserService.parseTransactions.mockReturnValue([
-        { username: "PhotoUser", amount: 1000, type: "in" },
-      ]);
-      GameService.createGame.mockReturnValue(77);
-      GameService.addTransactions.mockReturnValue(1);
+      (processGameMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+        reply: "✅ Игра от 2026-03-20 успешно создана. Добавлено записей: 1",
+        ok: true,
+      });
 
       await game.photoHandler(ctx as Context);
 
-      expect(GameService.createGame).toHaveBeenCalledWith(
-        12345,
-        555,
-        "2026-03-20",
+      expect(processGameMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: expect.stringContaining("game"),
+          platform: "telegram",
+          chatId: 12345,
+        }),
       );
-      expect(GameService.addTransactions).toHaveBeenCalled();
       expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
         ctx,
         expect.stringContaining("✅ Игра от 2026-03-20 успешно создана"),
@@ -223,8 +176,8 @@ describe("game handlers", () => {
 
       await game.photoHandler(ctx as Context);
 
-      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
-      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(processGameMessage).not.toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
     });
 
     it("игнорирует фото с упоминанием, но без game", async () => {
@@ -238,8 +191,8 @@ describe("game handlers", () => {
 
       await game.photoHandler(ctx as Context);
 
-      expect(ParserService.extractGameDateFromText).not.toHaveBeenCalled();
-      expect(GameService.createGame).not.toHaveBeenCalled();
+      expect(processGameMessage).not.toHaveBeenCalled();
+      expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
     });
 
     it("обрабатывает ошибку и отправляет сообщение об ошибке", async () => {
@@ -250,10 +203,9 @@ describe("game handlers", () => {
           message_id: 777,
         },
       });
-      const testError = new Error("Photo processing error");
-      ParserService.extractGameDateFromText.mockImplementation(() => {
-        throw testError;
-      });
+      (processGameMessage as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error("Photo processing error"),
+      );
 
       await game.photoHandler(ctx as Context);
 
@@ -264,92 +216,48 @@ describe("game handlers", () => {
         ctx,
         "❌ Произошла ошибка при обработке фотографии.",
       );
-      expect(GameService.createGame).not.toHaveBeenCalled();
     });
   });
 
   describe("editedMessageHandler", () => {
-    it("обновляет существующую игру", async () => {
-      const gameRow = {
-        game_date: "2026-01-01",
-        message_id: 777,
-        chat_id: 12345,
-        id: 10,
-      };
-      GameRepository.findByChatAndMessage.mockReturnValue(gameRow);
+    it("передаёт сообщение в processGameMessage с isEdited=true", async () => {
+      (processGameMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+        reply: "✏️ Игра от 2026-02-15 обновлена. Добавлено записей: 1",
+        ok: true,
+      });
       const ctx = createMockContext({
         editedMessage: {
           text: "game 15.02.2026\nВход:\n+300 | Editor",
           chat: { id: 12345 },
           message_id: 777,
-        },
-      });
-      ParserService.extractGameDateFromText.mockReturnValue("2026-02-15");
-      ParserService.parseTransactions.mockReturnValue([
-        { username: "Editor", amount: 300, type: "in" },
-      ]);
-      GameService.updateGame.mockReturnValue(1);
-
-      await game.editedMessageHandler(ctx as Context);
-
-      expect(GameService.updateGame).toHaveBeenCalledWith(10, "2026-02-15", [
-        { username: "Editor", amount: 300, type: "in" },
-      ]);
-      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
-        ctx,
-        expect.stringContaining("✏️ Игра от 2026-02-15 обновлена"),
-      );
-    });
-
-    it("создаёт новую игру при упоминании бота и game", async () => {
-      GameRepository.findByChatAndMessage.mockReturnValue(null);
-      const ctx = createMockContext({
-        editedMessage: {
-          text: "@testbot game 16.02.2025\nВход:\n+400 | NewUser",
-          entities: [{ type: "mention", offset: 0, length: 8 }],
-          chat: { id: 12345 },
-          message_id: 888,
-        },
-      });
-      ParserService.parseTransactions.mockReturnValue([
-        { username: "NewUser", amount: 400, type: "in" },
-      ]);
-      ParserService.extractGameDateFromText.mockReturnValue("2025-02-16");
-      GameService.createGame.mockReturnValue(11);
-      GameService.addTransactions.mockReturnValue(1);
-
-      await game.editedMessageHandler(ctx as Context);
-
-      expect(GameService.createGame).toHaveBeenCalledWith(
-        12345,
-        888,
-        "2025-02-16",
-      );
-      expect(GameService.addTransactions).toHaveBeenCalledWith(
-        11,
-        expect.any(Array),
-      );
-      expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
-        ctx,
-        expect.stringContaining("✅ Игра от 2025-02-16 успешно создана"),
-      );
-    });
-
-    it("игнорирует редактирование без упоминания бота (не plain data)", async () => {
-      GameRepository.findByChatAndMessage.mockReturnValue(null);
-      const ctx = createMockContext({
-        editedMessage: {
-          text: "Вход:\n+300 | NoMention",
-          chat: { id: 12345 },
-          message_id: 999,
           entities: [],
         },
       });
 
       await game.editedMessageHandler(ctx as Context);
 
-      expect(GameService.createGame).not.toHaveBeenCalled();
-      expect(middlewares.replyWithAutoDelete).not.toHaveBeenCalled();
+      expect(processGameMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: expect.stringContaining("game"),
+          platform: "telegram",
+          messageId: 777,
+          isEdited: true,
+          chatId: 12345,
+        }),
+      );
+    });
+
+    it("игнорирует редактирование без chat", async () => {
+      const ctx = createMockContext({
+        editedMessage: {
+          text: "game 15.02.2026\nВход:\n+300 | Editor",
+          message_id: 777,
+        },
+      });
+
+      await game.editedMessageHandler(ctx as Context);
+
+      expect(processGameMessage).not.toHaveBeenCalled();
     });
 
     it("обрабатывает ошибку и отправляет сообщение об ошибке", async () => {
@@ -361,10 +269,9 @@ describe("game handlers", () => {
           message_id: 1000,
         },
       });
-      const testError = new Error("Edit processing error");
-      GameRepository.findByChatAndMessage.mockImplementation(() => {
-        throw testError;
-      });
+      (processGameMessage as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error("Edit processing error"),
+      );
 
       await game.editedMessageHandler(ctx as Context);
 
@@ -375,7 +282,6 @@ describe("game handlers", () => {
         ctx,
         "❌ Произошла ошибка при обработке редактирования.",
       );
-      expect(GameService.updateGame).not.toHaveBeenCalled();
     });
   });
 });

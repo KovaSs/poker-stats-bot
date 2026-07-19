@@ -70,4 +70,49 @@ export const migrations: Migration[] = [
     },
     name: "002_migrate_user_stats",
   },
+  {
+    up: (db: Database) => {
+      const columnExists = db
+        .prepare(
+          `SELECT name FROM pragma_table_info('games') WHERE name = 'platform'`,
+        )
+        .get();
+      if (!columnExists) {
+        db.exec(
+          `ALTER TABLE games ADD COLUMN platform TEXT DEFAULT 'telegram'`,
+        );
+      }
+    },
+    name: "003_add_platform_to_games",
+  },
+  {
+    up: (db: Database) => {
+      for (const col of ["vk_wall_post_id", "vk_wall_owner_id"]) {
+        const exists = db
+          .prepare(
+            `SELECT name FROM pragma_table_info('games') WHERE name = ?`,
+          )
+          .get(col);
+        if (!exists) {
+          db.exec(`ALTER TABLE games ADD COLUMN ${col} INTEGER DEFAULT NULL`);
+        }
+      }
+    },
+    name: "004_add_vk_wall_post_fields",
+  },
+  {
+    up: (db: Database) => {
+      const exists = db
+        .prepare(
+          `SELECT name FROM pragma_table_info('games') WHERE name = ?`,
+        )
+        .get("community_message_id");
+      if (!exists) {
+        db.exec(
+          `ALTER TABLE games ADD COLUMN community_message_id INTEGER DEFAULT NULL`,
+        );
+      }
+    },
+    name: "005_add_community_message_id",
+  },
 ];

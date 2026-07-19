@@ -29,12 +29,29 @@ describe("GET /stats", () => {
     const res = await request(app).get("/stats?chatId=123");
     expect(res.status).toBe(200);
     expect(res.body).toEqual(mockStats);
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(123, undefined);
+    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
+      123,
+      undefined,
+      undefined,
+    );
   });
 
   it("передаёт параметр filter", async () => {
     await request(app).get("/stats?chatId=123&filter=2024");
-    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(123, "2024");
+    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
+      123,
+      "2024",
+      undefined,
+    );
+  });
+
+  it("передаёт параметр platform", async () => {
+    await request(app).get("/stats?chatId=123&platform=vk");
+    expect(StatsService.getFilteredStats).toHaveBeenCalledWith(
+      123,
+      undefined,
+      "vk",
+    );
   });
 
   it("обрабатывает ошибки сервиса", async () => {

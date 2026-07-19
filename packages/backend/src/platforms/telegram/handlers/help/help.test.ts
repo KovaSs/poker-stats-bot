@@ -10,7 +10,7 @@ vi.mock("../../middlewares", () => ({
 }));
 
 describe("sendHelpMessage", () => {
-  it("отправляет справку с Markdown", async () => {
+  it("отправляет справку", async () => {
     const ctx = {
       telegram: { sendMessage: vi.fn() },
       chat: { id: 123 },
@@ -18,8 +18,7 @@ describe("sendHelpMessage", () => {
     await sendHelpMessage(ctx as Context);
     expect(middlewares.replyWithAutoDelete).toHaveBeenCalledWith(
       ctx,
-      expect.stringContaining("📚 **Список доступных команд:**"),
-      { parse_mode: "Markdown" },
+      expect.stringContaining("📚 Список доступных команд:"),
     );
   });
 });

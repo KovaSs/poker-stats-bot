@@ -47,6 +47,7 @@ describe("GameService", () => {
         123,
         456,
         "2026-03-28",
+        "telegram",
       );
       expect(result).toBe(mockGameId);
       // recalcStats не должен вызываться при создании

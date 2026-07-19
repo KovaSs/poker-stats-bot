@@ -2,10 +2,10 @@ import { Telegraf } from "telegraf";
 
 import { logger } from "@/config/logger";
 
-import { registerCallbacks } from "./callbacks";
-import { menuCallback } from "./handlers/menu";
-import { errorHandler } from "./middlewares";
-import * as handlers from "./handlers";
+import { registerCallbacks } from "../callbacks";
+import { menuCallback } from "../handlers/menu";
+import { errorHandler } from "../middlewares";
+import * as handlers from "../handlers";
 
 export function setupBot(token: string, apiRoot?: string) {
   const options: { telegram?: { apiRoot: string } } = {};
