@@ -232,8 +232,8 @@ describe("TransactionRepository", () => {
     it("возвращает топ по разнице (score = total_out - total_in)", () => {
       const scores = txRepo.getFilteredScores(123);
       expect(scores).toEqual([
-        { username: "user2", score: -20 },
-        { username: "user1", score: -70 },
+        { username: "user2", name: "user2", score: -20 },
+        { username: "user1", name: "user1", score: -70 },
       ]);
     });
 
@@ -242,16 +242,16 @@ describe("TransactionRepository", () => {
         year: "2024",
       });
       expect(scores2024).toEqual([
-        { username: "user2", score: -30 },
-        { username: "user1", score: -50 },
+        { username: "user2", name: "user2", score: -30 },
+        { username: "user1", name: "user1", score: -50 },
       ]);
 
       const scores2025 = txRepo.getFilteredScores(123, {
         year: "2025",
       });
       expect(scores2025).toEqual([
-        { username: "user2", score: 10 },
-        { username: "user1", score: -20 },
+        { username: "user2", name: "user2", score: 10 },
+        { username: "user1", name: "user1", score: -20 },
       ]);
     });
 
@@ -261,8 +261,8 @@ describe("TransactionRepository", () => {
         sinceDate,
       });
       expect(scores).toEqual([
-        { username: "user2", score: 10 },
-        { username: "user1", score: -20 },
+        { username: "user2", name: "user2", score: 10 },
+        { username: "user1", name: "user1", score: -20 },
       ]);
     });
   });

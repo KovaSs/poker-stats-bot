@@ -1,5 +1,12 @@
 # Changelog — poker-stats-monorepo
 
+## [0.3.1] — 2026-07-20
+
+### Backend — [v0.5.1](packages/backend/CHANGELOG.md#051-2026-07-20)
+
+- Исправлено отображение имени в статистике и топе: теперь используется `global_users.name` вместо старого `t.username`
+- `getFilteredScores` теперь резолвит имя через `user_identities`/`global_users` (раньше работал только `getFilteredStats`)
+
 ## [0.3.0] — 2026-07-19
 
 ### Backend — [v0.5.0](packages/backend/CHANGELOG.md#050-2026-07-19)

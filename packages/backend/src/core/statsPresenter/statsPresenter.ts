@@ -11,6 +11,7 @@ export function formatStatsTitle(filter?: string): string {
 export function formatStatsTable(
   stats: {
     username: string;
+    name?: string;
     total_in: number;
     total_out: number;
     games_count: number;
@@ -27,7 +28,7 @@ export function formatStatsTable(
 
   stats.slice(0, 30).forEach((item, index) => {
     const num = (index + 1).toString().padEnd(4);
-    const username = item.username.padEnd(18);
+    const username = (item.name || item.username).padEnd(18);
     const gamesCount = item.games_count.toString().padStart(4);
     const totalIn = item.total_in.toString().padStart(6);
     const totalOut = item.total_out.toString().padStart(6);
@@ -48,7 +49,7 @@ export function formatTopTitle(filter?: string): string {
 }
 
 export function formatTopList(
-  scores: { username: string; score: number }[],
+  scores: { username: string; name?: string; score: number }[],
   filter?: string,
 ): string {
   if (scores.length === 0) {
@@ -60,7 +61,8 @@ export function formatTopList(
     .slice(0, 10)
     .map((u, i) => {
       const sign = u.score >= 0 ? "+" : "";
-      return `${i + 1}. ${u.username} — ${sign}${u.score}`;
+      const name = u.name || u.username;
+      return `${i + 1}. ${name} — ${sign}${u.score}`;
     })
     .join("\n");
   return result;

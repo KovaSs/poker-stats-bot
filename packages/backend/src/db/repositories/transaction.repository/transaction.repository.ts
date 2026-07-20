@@ -99,22 +99,26 @@ export class TransactionRepository {
   getFilteredScores(
     chatId?: number,
     filter?: { year?: string; sinceDate?: string; platform?: string; sort?: string; order?: string },
-  ): { username: string; score: number }[] {
+  ): { username: string; name?: string; score: number }[] {
     const { sql: filterSql, orderBy, params } = buildParams(chatId, filter);
     const finalOrder = orderBy || " ORDER BY score DESC";
     const sql = `
       SELECT
         t.username,
+        COALESCE(gu.name, t.username) as name,
         (COALESCE(SUM(CASE WHEN t.type = 'out' THEN t.amount ELSE 0 END), 0) -
           COALESCE(SUM(CASE WHEN t.type = 'in' THEN t.amount ELSE 0 END), 0)) as score
       FROM transactions t
       JOIN games g ON t.game_id = g.id
+      LEFT JOIN user_identities ui ON ui.username = t.username AND ui.platform = g.platform AND ui.chat_id = g.chat_id
+      LEFT JOIN global_users gu ON gu.id = ui.global_user_id
       WHERE 1=1${filterSql}
-      GROUP BY t.username${finalOrder}
+      GROUP BY COALESCE(gu.id, t.username)${finalOrder}
     `;
 
     const stmt = getDB().prepare(sql);
     const rows = stmt.all(...params) as {
+      name: string;
       username: string;
       score: number;
     }[];

@@ -70,8 +70,9 @@ export async function sendTop(ctx: Context, chatId: number, filter?: string) {
       .slice(0, 10)
       .map((u, i) => {
         const sign = u.score >= 0 ? "+" : "";
-        const escapedUsername = escapeMarkdown(u.username);
-        return `${i + 1}. ${escapedUsername} — ${sign}${u.score}`;
+        const name = u.name || u.username;
+        const escapedName = escapeMarkdown(name);
+        return `${i + 1}. ${escapedName} — ${sign}${u.score}`;
       })
       .join("\n");
 

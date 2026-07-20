@@ -1,5 +1,12 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="051-2026-07-20"></a>
+## [0.5.1] — 2026-07-20
+
+### Fixed
+- Статистика и топ теперь отображают имя из `global_users.name` вместо старого username из транзакции
+- `getFilteredScores` SQL теперь JOINит с `user_identities`/`global_users` для резолва имени (раньше использовался только `t.username`)
+
 <a name="050-2026-07-19"></a>
 ## [0.5.0] — 2026-07-19
 

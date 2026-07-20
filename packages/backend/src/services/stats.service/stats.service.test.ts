@@ -88,8 +88,8 @@ describe("StatsService", () => {
     txRepo.add(gameId2, "user2", 100, "out");
     const scores = statsService.getFilteredScores(1, "2024");
     expect(scores).toEqual([
-      { username: "user1", score: 200 },
-      { username: "user2", score: 50 },
+      { username: "user1", name: "user1", score: 200 },
+      { username: "user2", name: "user2", score: 50 },
     ]);
   });
 
