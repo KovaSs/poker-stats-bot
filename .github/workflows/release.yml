@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # если порт SSH нестандартный, добавьте port: 22
+          script: |
+            set -e
+            cd /root/poker-stats-bot
+
+            # Создаём .env файл из секретов
+            cat > .env <<EOF
+            # === Основные переменные ===
+            BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+            TELEGRAM_API_URL=${{ secrets.TELEGRAM_API_URL }}
+            VK_ACCESS_TOKEN=${{ secrets.VK_ACCESS_TOKEN }}
+            VK_GROUP_ID=${{ secrets.VK_GROUP_ID }}
+            VK_COMMUNITY_CHAT_ID=${{ secrets.VK_COMMUNITY_CHAT_ID }}
+            VK_CLIENT_ID=${{ secrets.VK_CLIENT_ID }}
+            VK_CLIENT_SECRET=${{ secrets.VK_CLIENT_SECRET }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            API_PORT=${{ secrets.API_PORT }}
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+            LOG_LEVEL=${{ secrets.LOG_LEVEL }}
+            SKIP_AUTH=${{ secrets.SKIP_AUTH }}
+            NODE_ENV=production
+            EOF
+
+            # Обновляем код до нужного тега
+            git fetch --tags
+            git checkout ${{ github.ref_name }}
+
+            # Пересобираем и перезапускаем контейнеры
+            docker-compose build --no-cache
+            docker-compose up -d --remove-orphans
+
+            # Очищаем старые образы (освобождаем место)
+            docker image prune -f
