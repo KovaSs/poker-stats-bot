@@ -43,8 +43,9 @@ jobs:
             git checkout ${{ github.ref_name }}
 
             # Пересобираем и перезапускаем контейнеры
-            docker-compose build --no-cache
-            docker-compose up -d --remove-orphans
+
+            docker-compose down
+            docker-compose up -d --build
 
             # Очищаем старые образы (освобождаем место)
             docker image prune -f
