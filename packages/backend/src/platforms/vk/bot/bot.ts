@@ -1,11 +1,16 @@
 import { VK } from "vk-io";
 
-import { VK_ACCESS_TOKEN, VK_COMMUNITY_CHAT_ID, VK_GROUP_ID } from "@/config/env";
+import {
+  VK_ACCESS_TOKEN,
+  VK_COMMUNITY_CHAT_ID,
+  VK_GROUP_ID,
+} from "@/config/env";
 import { logger } from "@/config/logger";
 
 import { handleVKMessage } from "../handlers/message";
 import { buildMenuKeyboard } from "../handlers/menu";
 import { scheduleAutoDelete } from "../middlewares";
+import { version } from "../../../../package.json";
 
 let vkClient: VK | null = null;
 
@@ -42,14 +47,15 @@ export async function initVKPlatform(): Promise<void> {
       const chatId: number = VK_COMMUNITY_CHAT_ID;
       try {
         const result = await vkClient.api.messages.send({
-          message: "🃏 Бот запущен. Используйте кнопки для команд:",
+          message: `🃏 Бот v${version} запущен. Используйте кнопки для команд`,
           keyboard: buildMenuKeyboard(),
           random_id: Date.now(),
           peer_id: chatId,
         });
-        const msgId = typeof result === "object"
-          ? (result as { message_id?: number }).message_id ?? Number(result)
-          : Number(result);
+        const msgId =
+          typeof result === "object"
+            ? ((result as { message_id?: number }).message_id ?? Number(result))
+            : Number(result);
         if (msgId) {
           scheduleAutoDelete(
             () =>
