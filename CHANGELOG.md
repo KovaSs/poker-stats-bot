@@ -1,5 +1,20 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.0] — 2026-07-25
+
+### Backend — [v0.6.0](packages/backend/CHANGELOG.md#060-2026-07-25)
+
+- Удалена TMA-авторизация (middlewares/auth, middlewares/combinedAuth, `@tma.js/init-data-node`)
+- VK message handler рефакторинг: выделены `buttonProcessor.ts` и `filterHandler.ts`
+- Express API: `combinedAuth` заменён на `authJwt`
+- 22 новых unit-теста (100% coverage для новых модулей)
+
+### Frontend — [v0.2.0](packages/frontend/CHANGELOG.md#020-2026-07-25)
+
+- VK ID авторизация: FloatingOneTap виджет вместо popup-авторизации
+- Новый хук `useVkFloatingOneTap` (старый `useVkLogin` удалён)
+- Отображение ошибок авторизации через Alert
+
 ## [0.3.1] — 2026-07-20
 
 ### Backend — [v0.5.1](packages/backend/CHANGELOG.md#051-2026-07-20)

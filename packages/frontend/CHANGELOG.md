@@ -1,5 +1,15 @@
 # Changelog — `frontend` (poker-stats-monorepo)
 
+<a name="020-2026-07-25"></a>
+## [0.2.0] — 2026-07-25
+
+### Changed
+- VK ID авторизация: FloatingOneTap виджет вместо popup-авторизации (`useVkLogin` → `useVkFloatingOneTap`)
+- Ошибки авторизации отображаются в фиксированном Alert (снизу справа)
+
+### Removed
+- `useVkLogin` хук с вызовом `VKID.Auth.login()` (попап-авторизация)
+
 <a name="010-2026-07-19"></a>
 ## [0.1.0] — 2026-07-19
 

@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 
-import { combinedAuth } from "@/middlewares/combinedAuth/combinedAuth";
+import { authJwt } from "@/middlewares/jwt/jwt";
 import { logger } from "@/config/logger";
 import { API_PORT } from "@/config/env";
 
@@ -15,8 +15,8 @@ export function startApiServer() {
   app.use(express.json());
 
   app.use("/api/auth", authRouter);
-  app.use("/api/years", combinedAuth, yearsRouter);
-  app.use("/api/stats", combinedAuth, statsRouter);
+  app.use("/api/years", authJwt, yearsRouter);
+  app.use("/api/stats", authJwt, statsRouter);
   app.use("/api/admin", adminRouter);
 
   app.use((req, res) => {

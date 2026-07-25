@@ -18,10 +18,10 @@ import { useQuery } from "@tanstack/react-query";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useEffect, useState } from "react";
 
-import { StatsTable } from "../StatsTable";
+import { useVkFloatingOneTap } from "../LoginPage";
 import { AdminPanel } from "../AdminPanel";
+import { StatsTable } from "../StatsTable";
 import { useAuth } from "../AuthProvider";
-import { useVkLogin } from "../LoginPage";
 import { FilterBar } from "../FilterBar";
 import { TopList } from "../TopList";
 
@@ -49,7 +49,7 @@ export const App = () => {
   const [sort, setSort] = useState<string | undefined>(undefined);
   const [sortDir, setSortDir] = useState<string | undefined>(undefined);
   const [tab, setTab] = useState(TABS.STATS);
-  const { handleLogin } = useVkLogin();
+  const { show: showVkWidget, error: vkError } = useVkFloatingOneTap();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -252,9 +252,16 @@ export const App = () => {
                 </Menu>
               </Box>
             ) : (
-              <Button color="inherit" onClick={handleLogin}>
-                Войти
-              </Button>
+              <>
+                <Button color="inherit" onClick={showVkWidget}>
+                  Войти
+                </Button>
+                {vkError && (
+                  <Alert severity="error" sx={{ position: "fixed", zIndex: 9999, bottom: 16, right: 16 }}>
+                    {vkError}
+                  </Alert>
+                )}
+              </>
             )}
           </Toolbar>
         </Container>

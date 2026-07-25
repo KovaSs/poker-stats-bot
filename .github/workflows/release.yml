@@ -34,7 +34,6 @@ jobs:
             API_PORT=${{ secrets.API_PORT }}
             FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             LOG_LEVEL=${{ secrets.LOG_LEVEL }}
-            SKIP_AUTH=${{ secrets.SKIP_AUTH }}
             NODE_ENV=production
             EOF
 

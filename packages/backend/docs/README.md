@@ -92,7 +92,7 @@ services/  ← бизнес-логика
 
 ### Auth Middleware
 
-`middlewares/auth.ts` — проверяет `Authorization: tma <initData>` через `@tma.js/init-data-node`. Пропускается в dev/Docker (`SKIP_AUTH=true`).
+`middlewares/jwt/jwt.ts` — проверяет `Authorization: Bearer <token>` через JWT. Пропускается в dev/Docker (`SKIP_AUTH=true`).
 
 ---
 
@@ -149,7 +149,7 @@ SQLite (`data/stats.db`), создаётся автоматически.
 | `VK_COMMUNITY_CHAT_ID` | Чат для дублирования игр |
 | `DB_PATH` | Путь к SQLite (по умолчанию `data/stats.db`) |
 | `API_PORT` | Порт Express (по умолчанию 3000) |
-| `SKIP_AUTH` | Пропустить auth middleware |
+| `SKIP_AUTH` | Пропустить JWT auth middleware |
 | `LOG_LEVEL` | Уровень pino (по умолчанию `info`) |
 
 Логирование: pino + pino-pretty в dev.

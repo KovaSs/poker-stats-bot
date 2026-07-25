@@ -1,5 +1,19 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="060-2026-07-25"></a>
+## [0.6.0] — 2026-07-25
+
+### Removed
+- TMA authentication (middlewares/auth + middlewares/combinedAuth, dependency `@tma.js/init-data-node`)
+- SKIP_AUTH env var from docker-compose and release workflow
+
+### Changed
+- VK message handler refactored: button normalization → `buttonProcessor.ts`, filter state management → `filterHandler.ts`
+- Express API auth: `combinedAuth` replaced with `authJwt` (JWT-only)
+
+### Added
+- Unit tests for `buttonProcessor` and `filterHandler` (22 tests, 100% coverage)
+
 <a name="051-2026-07-20"></a>
 ## [0.5.1] — 2026-07-20
 

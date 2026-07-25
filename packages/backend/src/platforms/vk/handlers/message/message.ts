@@ -1,36 +1,28 @@
-import {
-  processGameMessage,
-  processCommand,
-  formatStatsTable,
-  formatTopList,
-} from "@/core";
+import { processGameMessage, processCommand } from "@/core";
 import { VK_GROUP_ID } from "@/config/env";
-import { container } from "@/di/container";
-import { StatsService } from "@/services";
 import { logger } from "@/config/logger";
 
-import { buildMenuKeyboard, buildStatsFilterKeyboard, buildTopFilterKeyboard, buttonCommands } from "../menu/menu";
-import { duplicateToCommunityChat } from "../../handlers/duplicate/duplicate";
+import { duplicateToCommunityChat } from "../../handlers/duplicate";
 import { scheduleAutoDelete } from "../../middlewares";
 import { vkContextToIMessage } from "../../adapters";
+import { buildMenuKeyboard } from "../menu";
 import { getVK } from "../../bot";
+
+import { saveFilterPromptId, handleFilterCommand } from "./filterHandler";
+import { isButtonOrYearFilter, normalizeText } from "./buttonProcessor";
 
 import type { VKContext } from "../../adapters";
 import type { IMessage } from "@/core";
-
-function getStatsService(): StatsService {
-  return container.resolve(StatsService);
-}
-
-// Храним ID последнего сообщения-подсказки с фильтрами для каждого чата
-const lastFilterPromptIds = new Map<number, number>();
 
 export async function handleVKMessage(
   context: VKContext & {
     id?: number;
     peerId?: number;
     peerType?: string;
-    send: (text: string, params?: Record<string, unknown>) => Promise<{ id?: number }>;
+    send: (
+      text: string,
+      params?: Record<string, unknown>,
+    ) => Promise<{ id?: number }>;
     attachments?: { toString: () => string }[];
   },
   isEdited: boolean,
@@ -57,16 +49,13 @@ export async function handleVKMessage(
       return;
     }
 
-    // Игнорируем сообщения от самой группы
     const vkGroupId = VK_GROUP_ID
       ? Number(VK_GROUP_ID.replace(/^club/i, "")) || null
       : null;
     if (vkGroupId && Number(ctx.senderId) === -vkGroupId) return;
 
-    // Проверяем упоминание бота или команду кнопки
     const rawText = imessage.text;
     const trimmedText = rawText.trim();
-    const isButtonCommand = Object.keys(buttonCommands).includes(trimmedText);
     const isYearFilter = /^[📊🏆]\s*\d{4}$/u.test(trimmedText);
     const mentionMatch = rawText.match(
       /^(?:@poker_club|\[[^\]]*\|@poker_club\])\s*(.*)$/is,
@@ -75,7 +64,7 @@ export async function handleVKMessage(
     if (mentionMatch) {
       imessage.text = mentionMatch[1].trim();
       if (!imessage.text) return;
-    } else if (!isButtonCommand && !isYearFilter) {
+    } else if (!isButtonOrYearFilter(trimmedText)) {
       logger.info(
         `[VK] Пропущено (нет упоминания): peerId=${ctx.peerId}, text="${rawText.slice(0, 50)}"`,
       );
@@ -90,25 +79,19 @@ export async function handleVKMessage(
       reply: string,
       extra?: Record<string, unknown>,
     ) => {
-      // Если extra содержит keyboard (например, фильтры), используем его,
-      // иначе — основное меню. Не дублируем keyboard из extra.
       const { keyboard: extraKeyboard, ...otherExtra } = extra || {};
       const sent = await context.send(reply, {
         keyboard: extraKeyboard || keyboardStr,
         ...otherExtra,
       });
 
-      // Запоминаем ID сообщения-подсказки с фильтрами для последующего удаления
       if (
         sent?.id &&
         peerId &&
         (reply.startsWith("📊 Выберите период") ||
           reply.startsWith("🏆 Выберите период"))
       ) {
-        lastFilterPromptIds.set(peerId, sent.id);
-        logger.info(
-          `[VK] Сохранён ID подсказки ${sent.id} для peer ${peerId}`,
-        );
+        saveFilterPromptId(peerId, sent.id);
       }
 
       const userMsgId =
@@ -153,8 +136,16 @@ export async function handleVKMessage(
 
     const result = await processAndReply(imessage, sendWithAutoDelete);
 
-    if (result.gameId && ctx.peerType === "user" && imessage.text.includes("game")) {
-      await duplicateToCommunityChat(result.gameId, imessage.text, context.attachments);
+    if (
+      result.gameId &&
+      ctx.peerType === "user" &&
+      imessage.text.includes("game")
+    ) {
+      await duplicateToCommunityChat(
+        result.gameId,
+        imessage.text,
+        context.attachments,
+      );
     }
   } catch (error) {
     logger.error(`[VK] Ошибка обработки: ${JSON.stringify(error, null, 2)}`);
@@ -170,23 +161,12 @@ async function processAndReply(
   imessage: IMessage,
   send: (text: string, extra?: Record<string, unknown>) => Promise<unknown>,
 ): Promise<{ gameId?: number }> {
-  const normalizedText = buttonCommands[imessage.text.trim()] || imessage.text;
-  if (normalizedText !== imessage.text) {
+  const { text: normalizedText, wasButton } = normalizeText(imessage.text);
+  if (wasButton && normalizedText !== imessage.text) {
     logger.info(`[VK] Кнопка: "${imessage.text}" → "${normalizedText}"`);
   }
 
-  // Определяем текст для обработки
-  let text = normalizedText;
-
-  // Обработка годовых фильтров: "📊 2024" → "!stats 2024", "🏆 2024" → "!top 2024"
-  const yearFilterMatch = text.match(/^([📊🏆])\s*(\d{4})$/u);
-  if (yearFilterMatch) {
-    const prefix = yearFilterMatch[1] === "📊" ? "!stats" : "!top";
-    text = `${prefix} ${yearFilterMatch[2]}`;
-    logger.info(`[VK] Годовой фильтр: "${normalizedText}" → "${text}"`);
-  }
-
-  const imessageNormalized = { ...imessage, text };
+  const imessageNormalized = { ...imessage, text: normalizedText };
 
   if (imessageNormalized.text.includes("game")) {
     const result = await processGameMessage(imessageNormalized);
@@ -200,9 +180,6 @@ async function processAndReply(
     return {};
   }
 
-  const years = getStatsService().getAvailableYears();
-
-  // Показываем inline-клавиатуру с фильтрами при запросе статистики/топа
   if (
     imessageNormalized.text.startsWith("!stats") ||
     imessageNormalized.text.startsWith("/stats") ||
@@ -210,27 +187,12 @@ async function processAndReply(
     imessageNormalized.text === "всё" ||
     imessageNormalized.text.startsWith("всё ")
   ) {
-    if (commandResult.filter !== undefined) {
-      // Удаляем предыдущее сообщение-подсказку с фильтрами
-      const promptId = lastFilterPromptIds.get(imessageNormalized.chatId);
-      if (promptId) {
-        lastFilterPromptIds.delete(imessageNormalized.chatId);
-        getVK()
-          ?.api.messages.delete({
-            peer_id: imessageNormalized.chatId,
-            message_ids: promptId,
-            delete_for_all: true,
-          })
-          .catch(() => {});
-      }
-      logger.info(`[VK] Статистика с фильтром: ${commandResult.filter}`);
-      const stats = getStatsService().getFilteredStats(undefined, commandResult.filter);
-      await send(formatStatsTable(stats, commandResult.filter));
-    } else {
-      await send("📊 Выберите период для статистики:", {
-        keyboard: buildStatsFilterKeyboard(years),
-      });
-    }
+    await handleFilterCommand(
+      "stats",
+      imessageNormalized.chatId,
+      commandResult.filter,
+      send,
+    );
     return {};
   }
 
@@ -241,26 +203,12 @@ async function processAndReply(
     imessageNormalized.text.startsWith("топ ") ||
     imessageNormalized.text === "!топ"
   ) {
-    if (commandResult.filter !== undefined) {
-      const promptId = lastFilterPromptIds.get(imessageNormalized.chatId);
-      if (promptId) {
-        lastFilterPromptIds.delete(imessageNormalized.chatId);
-        getVK()
-          ?.api.messages.delete({
-            peer_id: imessageNormalized.chatId,
-            message_ids: promptId,
-            delete_for_all: true,
-          })
-          .catch(() => {});
-      }
-      logger.info(`[VK] Топ с фильтром: ${commandResult.filter}`);
-      const scores = getStatsService().getFilteredScores(undefined, commandResult.filter);
-      await send(formatTopList(scores, commandResult.filter));
-    } else {
-      await send("🏆 Выберите период для топа:", {
-        keyboard: buildTopFilterKeyboard(years),
-      });
-    }
+    await handleFilterCommand(
+      "top",
+      imessageNormalized.chatId,
+      commandResult.filter,
+      send,
+    );
   }
   return {};
 }

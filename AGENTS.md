@@ -27,7 +27,7 @@ pnpm test             # pnpm -r test:unit — vitest across all packages
 ## Monorepo structure
 
 - `packages/backend/` — Telegram bot (Telegraf) + VK bot (vk-io) + Express API server
-- `packages/frontend/` — React + Vite + MUI + TanStack Query + Telegram Mini Apps
+- `packages/frontend/` — React + Vite + MUI + TanStack Query + VK ID
 - SQLite DB (`data/stats.db`) created automatically at root level in dev, `/app/data/` in Docker
 
 ## Backend architecture
@@ -102,7 +102,10 @@ Layers (top→bottom):
    - Full details live in the respective package changelog
 
 3. **When to bump**:
-   - Bump version in `package.json` + `CHANGELOG.md` in the same commit as the changes
+   - Bump version in every `package.json` whose package files were touched, plus its `CHANGELOG.md`, in the same commit as the changes
+   - Follow Semver rules from §Versioning & Changelog / Semver rules above
+   - If only one package changed, bump only that package + root changelog
+   - If both packages changed (backend + frontend), bump both + root changelog
    - Run `pnpm test` and `pnpm lint` before committing
 
 ## ESLint quirks
@@ -117,14 +120,8 @@ Layers (top→bottom):
 
 - `docker-compose.yml` runs both services: `bot` (port 3000) and `frontend` (port 8080 via nginx)
 - Production env vars (BOT_TOKEN) passed via `environment:` block, not `.env` file
-- `SKIP_AUTH=true` set in docker-compose — auth middleware is bypassed
 - Backend multi-stage Dockerfile uses `pnpm deploy --legacy` for pruned production node_modules
 - Frontend Dockerfile builds static files, serves via nginx with API proxy to `http://bot:3000`
-
-## Auth
-
-- Express API uses `@tma.js/init-data-node` to validate Telegram Mini App init data
-- Skipped in dev and Docker (`SKIP_AUTH=true` or non-production NODE_ENV)
 
 ## Platform adapters
 

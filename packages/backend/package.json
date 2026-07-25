@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "scripts": {
     "dev": "NODE_ENV=development ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
@@ -14,7 +14,6 @@
     "lint:fix": "eslint src --ext .ts --fix"
   },
   "dependencies": {
-    "@tma.js/init-data-node": "^2.0.7",
     "axios": "^1.18.1",
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.6",

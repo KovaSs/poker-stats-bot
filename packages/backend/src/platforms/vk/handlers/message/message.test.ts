@@ -6,6 +6,11 @@ const mockStatsService = vi.hoisted(() => ({
   getFilteredStats: vi.fn(),
 }));
 
+const mockIsButtonOrYearFilter = vi.hoisted(() => vi.fn());
+const mockNormalizeText = vi.hoisted(() => vi.fn((text) => ({ text, wasButton: false })));
+const mockHandleFilterCommand = vi.hoisted(() => vi.fn());
+const mockSaveFilterPromptId = vi.hoisted(() => vi.fn());
+
 vi.mock("@/core", () => ({
   processGameMessage: vi.fn(),
   formatStatsTable: vi.fn(),
@@ -53,7 +58,6 @@ vi.mock("../../bot", () => ({
   getVK: vi.fn().mockReturnValue(null),
 }));
 
-// Мок для menu.ts должен быть перед импортами
 vi.mock("../../handlers/menu/menu", () => ({
   buttonCommands: {
     "📊 Всё время": "!stats all",
@@ -69,6 +73,16 @@ vi.mock("../../handlers/menu/menu", () => ({
   buildMenuKeyboard: vi.fn().mockReturnValue("{}"),
 }));
 
+vi.mock("./buttonProcessor", () => ({
+  isButtonOrYearFilter: mockIsButtonOrYearFilter,
+  normalizeText: mockNormalizeText,
+}));
+
+vi.mock("./filterHandler", () => ({
+  saveFilterPromptId: mockSaveFilterPromptId,
+  handleFilterCommand: mockHandleFilterCommand,
+}));
+
 import { processGameMessage, processCommand, formatStatsTable, formatTopList } from "@/core";
 import { logger } from "@/config/logger";
 
@@ -81,6 +95,9 @@ describe("handleVKMessage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsButtonOrYearFilter.mockReturnValue(false);
+    mockNormalizeText.mockImplementation((text) => ({ text, wasButton: false }));
+    mockHandleFilterCommand.mockResolvedValue(undefined);
   });
 
   it("игнорирует сообщение без упоминания и не из кнопок", async () => {
@@ -97,6 +114,8 @@ describe("handleVKMessage", () => {
   });
 
   it("обрабатывает нажатие кнопки статистики", async () => {
+    mockIsButtonOrYearFilter.mockReturnValue(true);
+    mockNormalizeText.mockReturnValue({ text: "!stats", wasButton: true });
     vkContextToIMessage.mockReturnValue({ text: "📊 Статистика", chatId: 2000000001, platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: undefined, reply: null });
     mockStatsService.getAvailableYears.mockReturnValue(["2024"]);
@@ -105,7 +124,7 @@ describe("handleVKMessage", () => {
       { conversationMessageId: 1, text: "📊 Статистика", peerId: 2000000001, peerType: "chat", send: mockSend } as any,
       false,
     );
-    expect(mockSend).toHaveBeenCalledWith(expect.stringContaining("Выберите период"), expect.any(Object));
+    expect(mockHandleFilterCommand).toHaveBeenCalledWith("stats", 2000000001, undefined, expect.any(Function));
   });
 
   it("обрабатывает упоминание бота с командой", async () => {
@@ -141,42 +160,42 @@ describe("handleVKMessage", () => {
   });
 
   it("обрабатывает выбор года из фильтра статистики", async () => {
+    mockIsButtonOrYearFilter.mockReturnValue(true);
+    mockNormalizeText.mockReturnValue({ text: "!stats 2026", wasButton: true });
     vkContextToIMessage.mockReturnValue({ chatId: 2000000001, text: "📊 2026", platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: "2026", reply: null });
-    mockStatsService.getFilteredStats.mockReturnValue([]);
-    formatStatsTable.mockReturnValue("stats");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { conversationMessageId: 1, peerId: 2000000001, peerType: "chat", text: "📊 2026", send: mockSend } as any,
       false,
     );
-    expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(undefined, "2026");
+    expect(mockHandleFilterCommand).toHaveBeenCalledWith("stats", 2000000001, "2026", expect.any(Function));
   });
 
   it("обрабатывает выбор 'Всё время' из фильтра статистики", async () => {
+    mockIsButtonOrYearFilter.mockReturnValue(true);
+    mockNormalizeText.mockReturnValue({ text: "!stats all", wasButton: true });
     vkContextToIMessage.mockReturnValue({ text: "📊 Всё время", chatId: 2000000001, platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: "all", reply: null });
-    mockStatsService.getFilteredStats.mockReturnValue([]);
-    formatStatsTable.mockReturnValue("stats");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { conversationMessageId: 1, text: "📊 Всё время", peerId: 2000000001, peerType: "chat", send: mockSend } as any,
       false,
     );
-    expect(mockStatsService.getFilteredStats).toHaveBeenCalledWith(undefined, "all");
+    expect(mockHandleFilterCommand).toHaveBeenCalledWith("stats", 2000000001, "all", expect.any(Function));
   });
 
   it("обрабатывает выбор года из фильтра топа", async () => {
+    mockIsButtonOrYearFilter.mockReturnValue(true);
+    mockNormalizeText.mockReturnValue({ text: "!top 2025", wasButton: true });
     vkContextToIMessage.mockReturnValue({ chatId: 2000000001, text: "🏆 2025", platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ filter: "2025", reply: null });
-    mockStatsService.getFilteredScores.mockReturnValue([]);
-    formatTopList.mockReturnValue("top");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
       { conversationMessageId: 1, peerId: 2000000001, peerType: "chat", text: "🏆 2025", send: mockSend } as any,
       false,
     );
-    expect(mockStatsService.getFilteredScores).toHaveBeenCalledWith(undefined, "2025");
+    expect(mockHandleFilterCommand).toHaveBeenCalledWith("top", 2000000001, "2025", expect.any(Function));
   });
 
   it("обрабатывает пустое упоминание", async () => {
@@ -190,6 +209,8 @@ describe("handleVKMessage", () => {
   });
 
   it("нормализует текст при нажатии кнопок", async () => {
+    mockIsButtonOrYearFilter.mockReturnValue(true);
+    mockNormalizeText.mockReturnValue({ text: "!help", wasButton: true });
     vkContextToIMessage.mockReturnValue({ chatId: 2000000001, text: "📚 Помощь", platform: "vk", messageId: 1 });
     processCommand.mockReturnValue({ reply: "📚 Справка" });
     const { handleVKMessage } = await import("./message");
@@ -202,14 +223,13 @@ describe("handleVKMessage", () => {
 
   it("обрабатывает команду !top из текста", async () => {
     vkContextToIMessage.mockReturnValue({ text: "@poker_club !top 2024", chatId: 2000000001, platform: "vk", messageId: 1 });
+    mockNormalizeText.mockImplementation((text) => ({ text, wasButton: false }));
     processCommand.mockReturnValue({ filter: "2024", reply: null });
-    mockStatsService.getFilteredScores.mockReturnValue([]);
-    formatTopList.mockReturnValue("top");
     const { handleVKMessage } = await import("./message");
     await handleVKMessage(
-      { text: "@poker_club !top 2024", conversationMessageId: 1, peerId: 2000000001, peerType: "chat", send: mockSend } as any,
+      { conversationMessageId: 1, peerId: 2000000001, peerType: "chat", send: mockSend, text: "@poker_club !top 2024" } as any,
       false,
     );
-    expect(mockStatsService.getFilteredScores).toHaveBeenCalledWith(undefined, "2024");
+    expect(mockHandleFilterCommand).toHaveBeenCalledWith("top", 2000000001, "2024", expect.any(Function));
   });
 });

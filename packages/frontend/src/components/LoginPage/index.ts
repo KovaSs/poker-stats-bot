@@ -1,2 +1,1 @@
-export { useVkLogin } from "./LoginPage";
-
+export { useVkFloatingOneTap } from "./LoginPage";
