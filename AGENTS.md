@@ -98,8 +98,9 @@ Layers (top→bottom):
 2. **Root changelog** (`CHANGELOG.md`):
    - Top-level `## [version] — YYYY-MM-DD` headings
    - Per-package sections: `### Backend — [vX.Y.Z](link#anchor)` and `### Frontend — [vX.Y.Z](link#anchor)`
-   - Include only the most notable changes per package (3–5 bullet points max)
-   - Full details live in the respective package changelog
+    - Include only the most notable changes per package (3–5 bullet points max)
+    - Full details live in the respective package changelog
+    - **Never edit an already-released version entry** — always add a new `## [version]` heading above the previous one
 
 3. **When to bump**:
    - Bump version in every `package.json` whose package files were touched, plus its `CHANGELOG.md`, in the same commit as the changes

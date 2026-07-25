@@ -1,5 +1,11 @@
 # Changelog — `frontend` (poker-stats-monorepo)
 
+<a name="021-2026-07-25"></a>
+## [0.2.1] — 2026-07-25
+
+### Fixed
+- FloatingOneTap: серверный обмен кода вместо client-side `exchangeCode` — виджет больше не уходит в fallback-редирект
+
 <a name="020-2026-07-25"></a>
 ## [0.2.0] — 2026-07-25
 

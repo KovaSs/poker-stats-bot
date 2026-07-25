@@ -72,15 +72,12 @@ export function useVkFloatingOneTap() {
       widget.on(
         VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS,
         async (payload: unknown) => {
-          const data = payload as { code?: string; device_id?: string };
-          if (!data?.code || !data?.device_id) return;
+          const data = payload as { code?: string; data?: { code?: string } };
+          const code = data?.code || data?.data?.code;
+          if (!code) return;
           try {
-            const tokenResult = await VKID.Auth.exchangeCode(
-              data.code,
-              data.device_id,
-            );
             const res = await fetch("/api/auth/vk", {
-              body: JSON.stringify({ vk_id: tokenResult.user_id }),
+              body: JSON.stringify({ redirect_uri: window.location.origin, code }),
               headers: { "Content-Type": "application/json" },
               method: "POST",
             });

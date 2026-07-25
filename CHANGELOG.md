@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.1] — 2026-07-25
+
+### Frontend — [v0.2.1](packages/frontend/CHANGELOG.md#021-2026-07-25)
+
+- Исправлен fallback-редирект FloatingOneTap: серверный обмен кода вместо client-side `exchangeCode`
+
 ## [0.4.0] — 2026-07-25
 
 ### Backend — [v0.6.0](packages/backend/CHANGELOG.md#060-2026-07-25)
