@@ -1,5 +1,11 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="064-2026-07-25"></a>
+## [0.6.4] — 2026-07-25
+
+### Fixed
+- `authJwt`: при SKIP_AUTH=true устанавливается mock-пользователь, чтобы `/api/auth/me` не падал с 500
+
 <a name="063-2026-07-25"></a>
 ## [0.6.3] — 2026-07-25
 

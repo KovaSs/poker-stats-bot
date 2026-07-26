@@ -26,6 +26,7 @@ export function authJwt(req: Request, res: Response, next: NextFunction): void {
     process.env.SKIP_AUTH === "true"
   ) {
     logger.info("[JWT] SKIP_AUTH is enabled, skipping JWT validation");
+    req.user = { global_user_id: 1, role: "admin" };
     return next();
   }
 

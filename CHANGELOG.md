@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.6] — 2026-07-25
+
+### Backend — [v0.6.4](packages/backend/CHANGELOG.md#064-2026-07-25)
+
+- `authJwt`: при SKIP_AUTH=true устанавливается mock-пользователь, `/api/auth/me` не падает с 500
+
 ## [0.4.5] — 2026-07-25
 
 ### Backend — [v0.6.3](packages/backend/CHANGELOG.md#063-2026-07-25)
