@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.5] — 2026-07-25
+
+### Backend — [v0.6.3](packages/backend/CHANGELOG.md#063-2026-07-25)
+
+- VK OAuth token exchange: исправлен endpoint `/oauth2/auth` (был `/oauth2/token`)
+
 ## [0.4.4] — 2026-07-25
 
 ### Backend — [v0.6.2](packages/backend/CHANGELOG.md#062-2026-07-25)

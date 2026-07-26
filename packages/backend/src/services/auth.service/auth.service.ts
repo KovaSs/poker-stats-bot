@@ -20,6 +20,10 @@ export class AuthService {
     @inject(UserIdentityRepository) private readonly userIdentityRepository: UserIdentityRepository,
   ) {}
 
+  private generateState(): string {
+    return Math.random().toString(36).slice(2, 18);
+  }
+
   authenticateWithVkId(vkId: number): AuthTokens {
     let globalUser = this.globalUserRepository.findByVkId(vkId);
 
@@ -55,19 +59,18 @@ export class AuthService {
   async authenticateWithVk(code: string, redirectUri: string, codeVerifier?: string, deviceId?: string): Promise<AuthTokens> {
     const axios = (await import("axios")).default;
 
-    const params = new URLSearchParams({
+    const queryParams = new URLSearchParams({
+      client_id: VK_CLIENT_ID,
       grant_type: "authorization_code",
       redirect_uri: redirectUri,
-      client_id: VK_CLIENT_ID,
-      code,
+      state: this.generateState(),
     });
-    if (VK_CLIENT_SECRET) params.set("client_secret", VK_CLIENT_SECRET);
-    if (codeVerifier) params.set("code_verifier", codeVerifier);
-    if (deviceId) params.set("device_id", deviceId);
+    if (codeVerifier) queryParams.set("code_verifier", codeVerifier);
+    if (deviceId) queryParams.set("device_id", deviceId);
 
     const tokenResponse = await axios.post(
-      "https://id.vk.com/oauth2/token",
-      params.toString(),
+      `https://id.vk.ru/oauth2/auth?${queryParams.toString()}`,
+      new URLSearchParams({ code }).toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
     );
 

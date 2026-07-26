@@ -1,5 +1,11 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="063-2026-07-25"></a>
+## [0.6.3] — 2026-07-25
+
+### Fixed
+- VK OAuth token exchange: исправлен endpoint `/oauth2/auth` (был `/oauth2/token`), формат запроса соответствует VKID SDK
+
 <a name="062-2026-07-25"></a>
 ## [0.6.2] — 2026-07-25
 
