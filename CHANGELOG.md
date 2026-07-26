@@ -1,5 +1,15 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.11] — 2026-07-26
+
+### Backend — [v0.6.7](packages/backend/CHANGELOG.md#067-2026-07-26)
+
+- `PUT /api/admin/users/:id`: поддержка email и avatar_url
+
+### Frontend — [v0.2.8](packages/frontend/CHANGELOG.md#028-2026-07-26)
+
+- Админ-панель: диалог редактирования пользователя (имя, роль, email, URL аватара)
+
 ## [0.4.10] — 2026-07-26
 
 ### Backend — [v0.6.6](packages/backend/CHANGELOG.md#066-2026-07-26)

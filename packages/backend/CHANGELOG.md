@@ -1,5 +1,12 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="067-2026-07-26"></a>
+## [0.6.7] — 2026-07-26
+
+### Added
+- `PUT /api/admin/users/:id`: поддержка полей `email` и `avatar_url`
+- `GlobalUserRepository.updateEmail`, `updateAvatarUrl`
+
 <a name="066-2026-07-26"></a>
 ## [0.6.6] — 2026-07-26
 

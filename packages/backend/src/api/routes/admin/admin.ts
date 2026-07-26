@@ -35,6 +35,8 @@ router.get("/users", (req, res) => {
       created_at: u.created_at,
       updated_at: u.updated_at,
       vk_id: u.vk_id,
+      avatar_url: u.avatar_url,
+      email: u.email,
       name: u.name,
       role: u.role,
       id: u.id,
@@ -50,7 +52,7 @@ router.get("/users", (req, res) => {
 router.put("/users/:id", (req, res) => {
   try {
     const userId = parseInt(req.params.id, 10);
-    const { name, role } = req.body;
+    const { avatar_url, email, name, role } = req.body;
 
     const repo = container.resolve(GlobalUserRepository);
     const user = repo.findById(userId);
@@ -70,6 +72,19 @@ router.put("/users/:id", (req, res) => {
 
     if (name !== undefined) {
       repo.updateName(userId, name);
+    }
+
+    if (email !== undefined) {
+      const emailStr = email as string | null;
+      if (emailStr !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr)) {
+        res.status(400).json({ error: "Invalid email format" });
+        return;
+      }
+      repo.updateEmail(userId, emailStr);
+    }
+
+    if (avatar_url !== undefined) {
+      repo.updateAvatarUrl(userId, avatar_url as string | null);
     }
 
     res.json({ success: true });

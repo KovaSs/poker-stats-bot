@@ -87,6 +87,18 @@ export class GlobalUserRepository {
     `).run(name, id);
   }
 
+  updateEmail(id: number, email: string | null): void {
+    getDB().prepare(`
+      UPDATE global_users SET email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(email, id);
+  }
+
+  updateAvatarUrl(id: number, avatarUrl: string | null): void {
+    getDB().prepare(`
+      UPDATE global_users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(avatarUrl, id);
+  }
+
   delete(id: number): void {
     getDB().prepare(`DELETE FROM global_users WHERE id = ?`).run(id);
   }
