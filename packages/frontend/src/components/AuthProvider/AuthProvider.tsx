@@ -12,6 +12,8 @@ interface User {
   identities: UserIdentity[];
   role: "admin" | "user";
   vk_id: number | null;
+  avatar_url?: string | null;
+  name?: string | null;
   id: number;
 }
 

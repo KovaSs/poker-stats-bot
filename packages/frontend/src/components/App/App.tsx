@@ -209,14 +209,10 @@ export const App = () => {
                     sx={{ p: 0 }}
                   >
                     <Avatar
-                      sx={{
-                        bgcolor: "secondary.main",
-                        fontSize: 14,
-                        height: 32,
-                        width: 32,
-                      }}
+                      src={user.avatar_url || undefined}
+                      sx={{ bgcolor: "secondary.main", fontSize: 14, height: 32, width: 32 }}
                     >
-                      {user.id}
+                      {user.name?.[0] || user.id}
                     </Avatar>
                   </IconButton>
                 </Tooltip>
@@ -231,7 +227,7 @@ export const App = () => {
                 >
                   <MenuItem disabled>
                     <Typography variant="body2" color="text.secondary">
-                      ID: {user.id} ({user.role})
+                      {user.name ? `${user.name} (ID: ${user.id})` : `ID: ${user.id} (${user.role})`}
                     </Typography>
                   </MenuItem>
                   <MenuItem

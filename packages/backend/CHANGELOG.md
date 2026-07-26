@@ -1,5 +1,14 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="066-2026-07-26"></a>
+## [0.6.6] — 2026-07-26
+
+### Added
+- VK API: получение аватара (`photo_200`) и имени пользователя после авторизации
+- Миграция 011: колонка `avatar_url` в `global_users`
+- `GlobalUserRepository.updateAvatarAndName`
+- `GET /api/auth/me`: возвращает `avatar_url` и `name`
+
 <a name="065-2026-07-26"></a>
 ## [0.6.5] — 2026-07-26
 

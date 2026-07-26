@@ -56,9 +56,10 @@ router.get("/me", authJwt, (req, res) => {
         id: i.id,
       })),
       telegram_id: user.telegram_id,
+      avatar_url: user.avatar_url,
       vk_id: user.vk_id,
-      name: user.name,
       role: user.role,
+      name: user.name,
       id: user.id,
     });
   } catch (error) {

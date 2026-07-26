@@ -2,6 +2,7 @@ import { inject, injectable } from "tsyringe";
 import jwt from "jsonwebtoken";
 
 import { GlobalUserRepository, UserIdentityRepository } from "@/db/repositories";
+import { logger } from "@/config/logger";
 import { JWT_SECRET, VK_CLIENT_ID, VK_CLIENT_SECRET } from "@/config/env";
 
 export interface AuthTokens {
@@ -9,6 +10,8 @@ export interface AuthTokens {
     id: number;
     role: string;
     vk_id: number | null;
+    name: string | null;
+    avatar_url: string | null;
   };
   token: string;
 }
@@ -51,6 +54,8 @@ export class AuthService {
         role: globalUser.role,
         id: globalUser.id,
         vk_id: vkId,
+        name: globalUser.name,
+        avatar_url: globalUser.avatar_url,
       },
       token,
     };
@@ -98,6 +103,33 @@ export class AuthService {
       throw new Error("Failed to create/find global user");
     }
 
+    const accessToken = tokenResponse.data.access_token as string | undefined;
+
+    if (accessToken) {
+      try {
+        const userInfoResponse = await axios.get("https://api.vk.com/method/users.get", {
+          params: {
+            access_token: accessToken,
+            fields: "photo_200",
+            user_ids: vkUserId,
+            v: "5.131",
+          },
+        });
+        const vkUser = userInfoResponse.data?.response?.[0] as
+          | { first_name?: string; last_name?: string; photo_200?: string }
+          | undefined;
+        if (vkUser) {
+          const name = [vkUser.first_name, vkUser.last_name]
+            .filter(Boolean)
+            .join(" ") || null;
+          const avatarUrl = vkUser.photo_200 || null;
+          this.globalUserRepository.updateAvatarAndName(globalUser.id, name, avatarUrl);
+        }
+      } catch (vkApiError) {
+        logger.error({ error: vkApiError }, "[AUTH] Failed to fetch VK user info");
+      }
+    }
+
     const token = jwt.sign(
       {
         global_user_id: globalUser.id,
@@ -113,6 +145,8 @@ export class AuthService {
         role: globalUser.role,
         id: globalUser.id,
         vk_id: vkUserId,
+        name: globalUser.name,
+        avatar_url: globalUser.avatar_url,
       },
       token,
     };
@@ -122,6 +156,8 @@ export class AuthService {
     id: number;
     role: string;
     vk_id: number | null;
+    name: string | null;
+    avatar_url: string | null;
     identities: { platform: string; chat_id: number; username: string }[];
   }> {
     const user = this.globalUserRepository.findById(globalUserId);
@@ -136,6 +172,8 @@ export class AuthService {
         chat_id: i.chat_id,
       })),
       vk_id: user.vk_id,
+      name: user.name,
+      avatar_url: user.avatar_url,
       role: user.role,
       id: user.id,
     };

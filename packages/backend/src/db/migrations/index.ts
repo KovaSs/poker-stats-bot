@@ -225,4 +225,15 @@ export const migrations: Migration[] = [
     },
     name: "010_add_name_to_global_users",
   },
+  {
+    up: (db: Database) => {
+      const exists = db
+        .prepare(`SELECT name FROM pragma_table_info('global_users') WHERE name = ?`)
+        .get("avatar_url");
+      if (!exists) {
+        db.exec(`ALTER TABLE global_users ADD COLUMN avatar_url TEXT DEFAULT NULL`);
+      }
+    },
+    name: "011_add_avatar_to_global_users",
+  },
 ];

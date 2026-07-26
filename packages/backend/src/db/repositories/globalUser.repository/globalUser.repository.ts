@@ -6,6 +6,7 @@ export interface GlobalUserRow {
   telegram_id: number | null;
   role: "admin" | "user";
   vk_id: number | null;
+  avatar_url: string | null;
   email: string | null;
   name: string | null;
   created_at: string;
@@ -15,13 +16,14 @@ export interface GlobalUserRow {
 
 @injectable()
 export class GlobalUserRepository {
-  create(params?: { name?: string; vkId?: number; telegramId?: number; role?: "admin" | "user" }): number {
+  create(params?: { name?: string; avatarUrl?: string; vkId?: number; telegramId?: number; role?: "admin" | "user" }): number {
     const stmt = getDB().prepare(`
-      INSERT INTO global_users (name, vk_id, telegram_id, role)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO global_users (name, avatar_url, vk_id, telegram_id, role)
+      VALUES (?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
       params?.name ?? null,
+      params?.avatarUrl ?? null,
       params?.vkId ?? null,
       params?.telegramId ?? null,
       params?.role ?? "user",
@@ -71,6 +73,12 @@ export class GlobalUserRepository {
       UPDATE global_users SET telegram_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `);
     stmt.run(telegramId, id);
+  }
+
+  updateAvatarAndName(id: number, name: string | null, avatarUrl: string | null): void {
+    getDB().prepare(`
+      UPDATE global_users SET name = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(name, avatarUrl, id);
   }
 
   updateName(id: number, name: string): void {

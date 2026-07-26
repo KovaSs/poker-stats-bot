@@ -1,5 +1,17 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.10] — 2026-07-26
+
+### Backend — [v0.6.6](packages/backend/CHANGELOG.md#066-2026-07-26)
+
+- VK API: получение аватара и имени пользователя после авторизации
+- Миграция 011: колонка `avatar_url` в `global_users`
+- `/api/auth/me`: возвращает `avatar_url` и `name`
+
+### Frontend — [v0.2.7](packages/frontend/CHANGELOG.md#027-2026-07-26)
+
+- Отображение аватара и имени пользователя из VK в AppBar
+
 ## [0.4.9] — 2026-07-26
 
 ### Frontend — [v0.2.6](packages/frontend/CHANGELOG.md#026-2026-07-26)
