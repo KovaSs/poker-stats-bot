@@ -52,7 +52,7 @@ export class AuthService {
     };
   }
 
-  async authenticateWithVk(code: string, redirectUri: string, codeVerifier?: string): Promise<AuthTokens> {
+  async authenticateWithVk(code: string, redirectUri: string, codeVerifier?: string, deviceId?: string): Promise<AuthTokens> {
     const axios = (await import("axios")).default;
 
     const params = new URLSearchParams({
@@ -63,6 +63,7 @@ export class AuthService {
     });
     if (VK_CLIENT_SECRET) params.set("client_secret", VK_CLIENT_SECRET);
     if (codeVerifier) params.set("code_verifier", codeVerifier);
+    if (deviceId) params.set("device_id", deviceId);
 
     const tokenResponse = await axios.post(
       "https://id.vk.com/oauth2/token",

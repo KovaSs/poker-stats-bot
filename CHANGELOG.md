@@ -1,5 +1,15 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.4] — 2026-07-25
+
+### Backend — [v0.6.2](packages/backend/CHANGELOG.md#062-2026-07-25)
+
+- `POST /api/auth/vk`: добавлена поддержка `device_id` для code_v2 (VK OAuth PKCE)
+
+### Frontend — [v0.2.4](packages/frontend/CHANGELOG.md#024-2026-07-25)
+
+- VK OAuth PKCE: передача `device_id` из URL в backend для code_v2
+
 ## [0.4.3] — 2026-07-25
 
 ### Backend — [v0.6.1](packages/backend/CHANGELOG.md#061-2026-07-25)

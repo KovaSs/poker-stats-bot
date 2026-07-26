@@ -1,5 +1,11 @@
 # Changelog — `frontend` (poker-stats-monorepo)
 
+<a name="024-2026-07-25"></a>
+## [0.2.4] — 2026-07-25
+
+### Changed
+- VK OAuth PKCE: передача `device_id` из URL в backend для code_v2
+
 <a name="023-2026-07-25"></a>
 ## [0.2.3] — 2026-07-25
 

@@ -1,5 +1,11 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="062-2026-07-25"></a>
+## [0.6.2] — 2026-07-25
+
+### Changed
+- `POST /api/auth/vk`: добавлена поддержка `device_id` для code_v2 (VK OAuth PKCE)
+
 <a name="061-2026-07-25"></a>
 ## [0.6.1] — 2026-07-25
 

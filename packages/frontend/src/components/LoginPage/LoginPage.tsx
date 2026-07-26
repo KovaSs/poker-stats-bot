@@ -36,10 +36,10 @@ export function useVkAuth() {
       const codeChallenge = await generateCodeChallenge(codeVerifier);
       sessionStorage.setItem(VERIFIER_KEY, codeVerifier);
       const params = new URLSearchParams({
-        client_id: String(VK_APP_ID),
-        code_challenge: codeChallenge,
-        code_challenge_method: "S256",
         redirect_uri: window.location.origin,
+        client_id: String(VK_APP_ID),
+        code_challenge_method: "S256",
+        code_challenge: codeChallenge,
         response_type: "code",
       });
       window.location.href = `https://id.vk.com/authorize?${params}`;
@@ -52,11 +52,14 @@ export function useVkAuth() {
     async (code: string): Promise<void> => {
       const codeVerifier = sessionStorage.getItem(VERIFIER_KEY);
       sessionStorage.removeItem(VERIFIER_KEY);
+      const params = new URLSearchParams(window.location.search);
+      const deviceId = params.get("device_id");
       const body: Record<string, string> = {
         code,
         redirect_uri: window.location.origin,
       };
       if (codeVerifier) body.code_verifier = codeVerifier;
+      if (deviceId) body.device_id = deviceId;
       const res = await fetch("/api/auth/vk", {
         body: JSON.stringify(body),
         headers: { "Content-Type": "application/json" },

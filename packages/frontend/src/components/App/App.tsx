@@ -49,7 +49,7 @@ export const App = () => {
   const [sort, setSort] = useState<string | undefined>(undefined);
   const [sortDir, setSortDir] = useState<string | undefined>(undefined);
   const [tab, setTab] = useState(TABS.STATS);
-  const { exchangeCode, error: vkError, handleLogin } = useVkAuth();
+  const { error: vkError, exchangeCode, handleLogin } = useVkAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
