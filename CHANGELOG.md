@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.2] — 2026-07-25
+
+### Frontend — [v0.2.2](packages/frontend/CHANGELOG.md#022-2026-07-25)
+
+- FloatingOneTap: удалён fallback-редирект в VK OAuth (требует PKCE, который не поддерживается простым редиректом). При ошибке виджета — сообщение пользователю, повторная попытка по клику
+
 ## [0.4.1] — 2026-07-25
 
 ### Frontend — [v0.2.1](packages/frontend/CHANGELOG.md#021-2026-07-25)

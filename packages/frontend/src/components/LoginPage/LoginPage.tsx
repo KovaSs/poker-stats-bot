@@ -25,8 +25,6 @@ function ensureSDK(): boolean {
   }
 }
 
-const FALLBACK_URL = `https://id.vk.com/authorize?client_id=${VK_APP_ID}&redirect_uri=${encodeURIComponent(window.location.origin)}&response_type=code`;
-
 export function useVkFloatingOneTap() {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +36,7 @@ export function useVkFloatingOneTap() {
 
     const VKID = window.VKIDSDK;
     if (!VKID || !ensureSDK()) {
-      window.location.href = FALLBACK_URL;
+      setError("VK ID SDK недоступен. Попробуйте позже.");
       return;
     }
 
@@ -66,7 +64,6 @@ export function useVkFloatingOneTap() {
       widget.on(VKID.WidgetEvents.ERROR, () => {
         cleanup();
         setError("Ошибка авторизации. Попробуйте снова.");
-        window.location.href = FALLBACK_URL;
       });
 
       widget.on(
@@ -88,13 +85,11 @@ export function useVkFloatingOneTap() {
           } catch {
             cleanup();
             setError("Ошибка авторизации. Попробуйте снова.");
-            window.location.href = FALLBACK_URL;
           }
         },
       );
     } catch {
       setError("Ошибка авторизации. Попробуйте снова.");
-      window.location.href = FALLBACK_URL;
     }
   }, [login]);
 
