@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.7] — 2026-07-25
+
+### Frontend — [v0.2.5](packages/frontend/CHANGELOG.md#025-2026-07-25)
+
+- VK OAuth: поповер-авторизация через `window.open()` с PKCE вместо редиректа страницы
+
 ## [0.4.6] — 2026-07-25
 
 ### Backend — [v0.6.4](packages/backend/CHANGELOG.md#064-2026-07-25)

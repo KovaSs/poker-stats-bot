@@ -1,5 +1,11 @@
 # Changelog — `frontend` (poker-stats-monorepo)
 
+<a name="025-2026-07-25"></a>
+## [0.2.5] — 2026-07-25
+
+### Changed
+- VK OAuth: поповер-авторизация через `window.open()` с PKCE вместо редиректа страницы
+
 <a name="024-2026-07-25"></a>
 ## [0.2.4] — 2026-07-25
 
