@@ -1,5 +1,11 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="068-2026-07-26"></a>
+## [0.6.8] — 2026-07-26
+
+### Fixed
+- `authJwt`: при наличии валидного JWT используется его payload, даже при `SKIP_AUTH=true`
+
 <a name="067-2026-07-26"></a>
 ## [0.6.7] — 2026-07-26
 

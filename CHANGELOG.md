@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.12] — 2026-07-26
+
+### Backend — [v0.6.8](packages/backend/CHANGELOG.md#068-2026-07-26)
+
+- `authJwt`: при наличии валидного JWT используется его payload, даже при SKIP_AUTH
+
 ## [0.4.11] — 2026-07-26
 
 ### Backend — [v0.6.7](packages/backend/CHANGELOG.md#067-2026-07-26)

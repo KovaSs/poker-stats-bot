@@ -21,30 +21,27 @@ declare global {
 /* eslint-enable @typescript-eslint/no-namespace */
 
 export function authJwt(req: Request, res: Response, next: NextFunction): void {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      req.user = decoded;
+      return next();
+    } catch {
+      logger.warn("[JWT] Token validation failed, falling back to skip-auth");
+    }
+  }
+
   if (
     process.env.NODE_ENV !== "production" ||
     process.env.SKIP_AUTH === "true"
   ) {
-    logger.info("[JWT] SKIP_AUTH is enabled, skipping JWT validation");
+    logger.info("[JWT] SKIP_AUTH is enabled, using mock user");
     req.user = { global_user_id: 1, role: "admin" };
     return next();
   }
 
-  const authHeader = req.headers["authorization"];
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
-    return;
-  }
-
-  const token = authHeader.substring(7);
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    req.user = decoded;
-    next();
-  } catch (err) {
-    logger.error({ err }, "[JWT] Token validation failed");
-    res.status(401).json({ error: "Unauthorized: Invalid token" });
-  }
+  res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
 }
