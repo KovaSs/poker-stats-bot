@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.8] — 2026-07-26
+
+### Backend — [v0.6.5](packages/backend/CHANGELOG.md#065-2026-07-26)
+
+- VK OAuth: проверка `VK_CLIENT_ID`, обработка ошибок VK API, динамический домен для токен-ендпоинта
+
 ## [0.4.7] — 2026-07-25
 
 ### Frontend — [v0.2.5](packages/frontend/CHANGELOG.md#025-2026-07-25)

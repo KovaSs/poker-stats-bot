@@ -30,8 +30,9 @@ router.post("/vk", async (req, res) => {
     const result = await getAuthService().authenticateWithVk(code, redirect_uri, code_verifier, device_id);
     res.json(result);
   } catch (error) {
-    logger.error({ error }, "[API] /auth/vk error");
-    res.status(401).json({ error: "VK authentication failed" });
+    const message = error instanceof Error ? error.message : "VK authentication failed";
+    logger.error({ error, message }, "[API] /auth/vk error");
+    res.status(401).json({ error: message });
   }
 });
 

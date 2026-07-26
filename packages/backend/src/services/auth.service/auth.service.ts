@@ -57,6 +57,8 @@ export class AuthService {
   }
 
   async authenticateWithVk(code: string, redirectUri: string, codeVerifier?: string, deviceId?: string): Promise<AuthTokens> {
+    if (!VK_CLIENT_ID) throw new Error("VK_CLIENT_ID is not configured");
+
     const axios = (await import("axios")).default;
 
     const queryParams = new URLSearchParams({
@@ -68,11 +70,16 @@ export class AuthService {
     if (codeVerifier) queryParams.set("code_verifier", codeVerifier);
     if (deviceId) queryParams.set("device_id", deviceId);
 
+    const vkDomain = redirectUri?.includes("vk.ru") ? "id.vk.ru" : "id.vk.com";
     const tokenResponse = await axios.post(
-      `https://id.vk.ru/oauth2/auth?${queryParams.toString()}`,
+      `https://${vkDomain}/oauth2/auth?${queryParams.toString()}`,
       new URLSearchParams({ code }).toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
     );
+
+    if (tokenResponse.data.error) {
+      throw new Error(`VK API error: ${tokenResponse.data.error} — ${tokenResponse.data.error_description || ""}`);
+    }
 
     const vkUserId = tokenResponse.data.user_id as number;
 
