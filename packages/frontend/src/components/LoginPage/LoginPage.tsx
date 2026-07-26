@@ -4,94 +4,70 @@ import { useAuth } from "../AuthProvider";
 
 const VK_APP_ID = 54685122;
 
-let sdkInited = false;
-
-function ensureSDK(): boolean {
-  if (sdkInited) return true;
-  const VKID = window.VKIDSDK;
-  if (!VKID) return false;
-  try {
-    VKID.Config.init({
-      responseMode: VKID.ConfigResponseMode.Callback,
-      redirectUrl: window.location.origin,
-      source: VKID.ConfigSource.LOWCODE,
-      app: VK_APP_ID,
-      scope: "",
-    });
-    sdkInited = true;
-    return true;
-  } catch {
-    return false;
-  }
+function generateCodeVerifier(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789-._~";
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => chars[b % chars.length]).join("");
 }
 
-export function useVkFloatingOneTap() {
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+const VERIFIER_KEY = "vk_code_verifier";
+
+export function useVkAuth() {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
 
-  const show = useCallback(() => {
+  const handleLogin = useCallback(async () => {
     setError(null);
-
-    const VKID = window.VKIDSDK;
-    if (!VKID || !ensureSDK()) {
-      setError("VK ID SDK недоступен. Попробуйте позже.");
-      return;
-    }
-
-    const containerId = "vkid-floating-one-tap";
-    if (document.getElementById(containerId)) return;
-
-    const container = document.createElement("div");
-    container.id = containerId;
-    document.body.appendChild(container);
-
     try {
-      const floatingOneTap = new VKID.FloatingOneTap();
-      const widget = floatingOneTap.render({
-        showAlternativeLogin: true,
-        appName: "Poker club",
-        scheme: "dark",
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      sessionStorage.setItem(VERIFIER_KEY, codeVerifier);
+      const params = new URLSearchParams({
+        client_id: String(VK_APP_ID),
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
+        redirect_uri: window.location.origin,
+        response_type: "code",
       });
-
-      const cleanup = () => {
-        widget.close();
-        const el = document.getElementById(containerId);
-        if (el) el.remove();
-      };
-
-      widget.on(VKID.WidgetEvents.ERROR, () => {
-        cleanup();
-        setError("Ошибка авторизации. Попробуйте снова.");
-      });
-
-      widget.on(
-        VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS,
-        async (payload: unknown) => {
-          const data = payload as { code?: string; data?: { code?: string } };
-          const code = data?.code || data?.data?.code;
-          if (!code) return;
-          try {
-            const res = await fetch("/api/auth/vk", {
-              body: JSON.stringify({ redirect_uri: window.location.origin, code }),
-              headers: { "Content-Type": "application/json" },
-              method: "POST",
-            });
-            if (!res.ok) throw new Error("Auth failed");
-            const json = await res.json();
-            await login(json.token);
-            cleanup();
-          } catch {
-            cleanup();
-            setError("Ошибка авторизации. Попробуйте снова.");
-          }
-        },
-      );
+      window.location.href = `https://id.vk.com/authorize?${params}`;
     } catch {
       setError("Ошибка авторизации. Попробуйте снова.");
     }
-  }, [login]);
+  }, []);
 
-  return { clearError, error, show };
+  const exchangeCode = useCallback(
+    async (code: string): Promise<void> => {
+      const codeVerifier = sessionStorage.getItem(VERIFIER_KEY);
+      sessionStorage.removeItem(VERIFIER_KEY);
+      const body: Record<string, string> = {
+        code,
+        redirect_uri: window.location.origin,
+      };
+      if (codeVerifier) body.code_verifier = codeVerifier;
+      const res = await fetch("/api/auth/vk", {
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Auth failed");
+      const json = await res.json();
+      await login(json.token);
+    },
+    [login],
+  );
+
+  return { clearError, error, exchangeCode, handleLogin };
 }

@@ -1,5 +1,14 @@
 # Changelog — `frontend` (poker-stats-monorepo)
 
+<a name="023-2026-07-25"></a>
+## [0.2.3] — 2026-07-25
+
+### Changed
+- VK ID авторизация: PKCE-редирект вместо FloatingOneTap (VK требует PKCE для OAuth)
+
+### Removed
+- `useVkFloatingOneTap` — заменён на `useVkAuth` с PKCE challenge/verifier
+
 <a name="022-2026-07-25"></a>
 ## [0.2.2] — 2026-07-25
 

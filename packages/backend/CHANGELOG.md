@@ -1,5 +1,11 @@
 # Changelog — `backend` (poker-stats-monorepo)
 
+<a name="061-2026-07-25"></a>
+## [0.6.1] — 2026-07-25
+
+### Changed
+- `POST /api/auth/vk`: добавлена поддержка `code_verifier` (PKCE) для VK OAuth
+
 <a name="060-2026-07-25"></a>
 ## [0.6.0] — 2026-07-25
 

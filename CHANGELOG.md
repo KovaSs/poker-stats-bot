@@ -1,5 +1,16 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.3] — 2026-07-25
+
+### Backend — [v0.6.1](packages/backend/CHANGELOG.md#061-2026-07-25)
+
+- `POST /api/auth/vk`: добавлена поддержка `code_verifier` (PKCE)
+
+### Frontend — [v0.2.3](packages/frontend/CHANGELOG.md#023-2026-07-25)
+
+- VK ID авторизация: PKCE-редирект вместо FloatingOneTap
+- Новый хук `useVkAuth` с PKCE challenge/verifier (вместо `useVkFloatingOneTap`)
+
 ## [0.4.2] — 2026-07-25
 
 ### Frontend — [v0.2.2](packages/frontend/CHANGELOG.md#022-2026-07-25)

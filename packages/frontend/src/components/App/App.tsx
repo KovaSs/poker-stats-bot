@@ -18,10 +18,10 @@ import { useQuery } from "@tanstack/react-query";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useEffect, useState } from "react";
 
-import { useVkFloatingOneTap } from "../LoginPage";
 import { AdminPanel } from "../AdminPanel";
 import { StatsTable } from "../StatsTable";
 import { useAuth } from "../AuthProvider";
+import { useVkAuth } from "../LoginPage";
 import { FilterBar } from "../FilterBar";
 import { TopList } from "../TopList";
 
@@ -49,26 +49,19 @@ export const App = () => {
   const [sort, setSort] = useState<string | undefined>(undefined);
   const [sortDir, setSortDir] = useState<string | undefined>(undefined);
   const [tab, setTab] = useState(TABS.STATS);
-  const { show: showVkWidget, error: vkError } = useVkFloatingOneTap();
+  const { exchangeCode, error: vkError, handleLogin } = useVkAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     if (!code || isAuthenticated) return;
 
-    fetch("/api/auth/vk", {
-      body: JSON.stringify({ redirect_uri: window.location.origin, code }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Auth failed");
-        const data = await res.json();
-        await login(data.token);
+    exchangeCode(code)
+      .then(() => {
         window.history.replaceState({}, "", window.location.pathname);
       })
       .catch(() => {});
-  }, [isAuthenticated, login]);
+  }, [exchangeCode, isAuthenticated]);
 
   const navItems = [
     { label: "Статистика", tab: TABS.STATS },
@@ -253,7 +246,7 @@ export const App = () => {
               </Box>
             ) : (
               <>
-                <Button color="inherit" onClick={showVkWidget}>
+                <Button color="inherit" onClick={handleLogin}>
                   Войти
                 </Button>
                 {vkError && (

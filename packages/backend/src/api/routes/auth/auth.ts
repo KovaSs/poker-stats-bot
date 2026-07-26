@@ -14,7 +14,7 @@ const router = Router();
 
 router.post("/vk", async (req, res) => {
   try {
-    const { redirect_uri, vk_id, code } = req.body;
+    const { code_verifier, redirect_uri, vk_id, code } = req.body;
 
     if (vk_id) {
       const result = getAuthService().authenticateWithVkId(vk_id);
@@ -27,7 +27,7 @@ router.post("/vk", async (req, res) => {
       return;
     }
 
-    const result = await getAuthService().authenticateWithVk(code, redirect_uri);
+    const result = await getAuthService().authenticateWithVk(code, redirect_uri, code_verifier);
     res.json(result);
   } catch (error) {
     logger.error({ error }, "[API] /auth/vk error");
