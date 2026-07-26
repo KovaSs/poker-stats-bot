@@ -16,7 +16,7 @@ import {
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import { useQuery } from "@tanstack/react-query";
 import MenuIcon from "@mui/icons-material/Menu";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AdminPanel } from "../AdminPanel";
 import { StatsTable } from "../StatsTable";
@@ -49,7 +49,19 @@ export const App = () => {
   const [sort, setSort] = useState<string | undefined>(undefined);
   const [sortDir, setSortDir] = useState<string | undefined>(undefined);
   const [tab, setTab] = useState(TABS.STATS);
-  const { error: vkError, handleLogin } = useVkAuth();
+  const { error: vkError, exchangeCode, handleLogin } = useVkAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (!code || isAuthenticated) return;
+
+    exchangeCode(code)
+      .then(() => {
+        window.history.replaceState({}, "", window.location.pathname);
+      })
+      .catch(() => {});
+  }, [exchangeCode, isAuthenticated]);
 
   const navItems = [
     { label: "Статистика", tab: TABS.STATS },

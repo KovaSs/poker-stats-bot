@@ -1,5 +1,11 @@
 # Changelog — `frontend` (poker-stats-monorepo)
 
+<a name="026-2026-07-26"></a>
+## [0.2.6] — 2026-07-26
+
+### Changed
+- VK OAuth: возвращён PKCE-редирект (вместо поповера)
+
 <a name="025-2026-07-25"></a>
 ## [0.2.5] — 2026-07-25
 

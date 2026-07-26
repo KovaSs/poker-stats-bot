@@ -1,5 +1,11 @@
 # Changelog — poker-stats-monorepo
 
+## [0.4.9] — 2026-07-26
+
+### Frontend — [v0.2.6](packages/frontend/CHANGELOG.md#026-2026-07-26)
+
+- VK OAuth: возвращён PKCE-редирект (вместо поповера)
+
 ## [0.4.8] — 2026-07-26
 
 ### Backend — [v0.6.5](packages/backend/CHANGELOG.md#065-2026-07-26)
