@@ -24,8 +24,8 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 function buildAuthUrl(codeChallenge: string): string {
     const params = new URLSearchParams({
       redirect_uri: window.location.origin,
-      client_id: String(VK_APP_ID),
       code_challenge_method: "S256",
+      client_id: String(VK_APP_ID),
       code_challenge: codeChallenge,
       response_type: "code",
     });
@@ -55,7 +55,10 @@ export function useVkAuth() {
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
-      if (!res.ok) throw new Error("Auth failed");
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null);
+        throw new Error(errBody?.error || "Auth failed");
+      }
       const json = await res.json();
       await login(json.token);
     },
